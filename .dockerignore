@@ -1,0 +1,9 @@
+*.py
+!server.py
+*.bat
+*.md
+*.json
+.firebase/
+node_modules/
+test_*.py
+find_apis.py
