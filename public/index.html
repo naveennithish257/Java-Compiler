@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaForge — Online Java Compiler</title>
+    <meta name="description" content="Online Java compiler and execution environment">
+    <meta property="og:title" content="JavaForge — Online Java Compiler">
+    <meta property="og:description" content="Online Java compiler and execution environment">
+
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #090c0b;
+            --surface: #111614;
+            --card: #171e1b;
+            --border: #253029;
+            --border-light: #2f3e36;
+            --text: #e4ece7;
+            --text-dim: #c0cfc6;
+            --muted: #5e7a6c;
+            --accent: #22c55e;
+            --accent-glow: rgba(34,197,94,0.1);
+            --accent-glow-strong: rgba(34,197,94,0.2);
+            --error: #f43f5e;
+            --error-bg: rgba(244,63,94,0.08);
+            --warning: #eab308;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(34,197,94,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(34,197,94,0.02) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none; z-index: 0;
+        }
+        .glow-orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; opacity:0.7; }
+        .glow-1 { width:500px;height:500px;background:rgba(34,197,94,0.05);top:-150px;left:-100px;animation:d1 25s ease-in-out infinite; }
+        .glow-2 { width:350px;height:350px;background:rgba(34,197,94,0.04);bottom:-100px;right:-50px;animation:d2 30s ease-in-out infinite; }
+        .glow-3 { width:250px;height:250px;background:rgba(16,185,129,0.03);top:40%;left:50%;animation:d3 20s ease-in-out infinite; }
+        @keyframes d1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(100px,80px) scale(1.1)}}
+        @keyframes d2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-80px,-60px) scale(1.05)}}
+        @keyframes d3{0%,100%{transform:translate(0,0)}33%{transform:translate(-40px,30px)}66%{transform:translate(30px,-20px)}}
+        .header-glow { height:1px; background:linear-gradient(90deg,transparent,var(--accent-glow-strong),rgba(34,197,94,0.4),var(--accent-glow-strong),transparent); }
+
+        .CodeMirror {
+            font-family:'JetBrains Mono',monospace !important;
+            font-size:13.5px !important; line-height:1.75 !important;
+            height:100% !important; background:transparent !important;
+            color:var(--text) !important; padding:4px 0;
+        }
+        .CodeMirror-gutters { background:transparent !important; border-right:1px solid var(--border) !important; padding-right:4px; }
+        .CodeMirror-linenumber { color:#3d5448 !important; font-size:11px !important; padding:0 10px !important; }
+        .CodeMirror-activeline-background { background:rgba(34,197,94,0.04) !important; }
+        .CodeMirror-cursor { border-left:2px solid var(--accent) !important; }
+        .CodeMirror-selected { background:rgba(34,197,94,0.13) !important; }
+        .CodeMirror-focused .CodeMirror-selected { background:rgba(34,197,94,0.18) !important; }
+        .CodeMirror-matchingbracket { color:var(--accent)!important; font-weight:700!important; background:rgba(34,197,94,0.2)!important; border-bottom:1px solid var(--accent); }
+        .CodeMirror-nonmatchingbracket { color:var(--error)!important; background:rgba(244,63,94,0.15)!important; }
+        .cm-s-default .cm-keyword{color:#c084fc!important;font-weight:500}
+        .cm-s-default .cm-atom{color:#f472b6!important}
+        .cm-s-default .cm-number{color:#fb923c!important}
+        .cm-s-default .cm-def{color:#60a5fa!important}
+        .cm-s-default .cm-variable{color:var(--text)!important}
+        .cm-s-default .cm-variable-2{color:#67e8f9!important}
+        .cm-s-default .cm-variable-3,.cm-s-default .cm-type{color:#fbbf24!important}
+        .cm-s-default .cm-property{color:#a78bfa!important}
+        .cm-s-default .cm-operator{color:#f0abfc!important}
+        .cm-s-default .cm-comment{color:#4ade80!important;font-style:italic;opacity:.8}
+        .cm-s-default .cm-string{color:#fde68a!important}
+        .cm-s-default .cm-string-2{color:#fca5a5!important}
+        .cm-s-default .cm-meta{color:var(--muted)!important}
+        .cm-s-default .cm-qualifier{color:#fbbf24!important}
+        .cm-s-default .cm-builtin{color:#38bdf8!important}
+        .cm-s-default .cm-bracket{color:var(--text-dim)!important}
+
+        .CodeMirror-vscrollbar::-webkit-scrollbar,.CodeMirror-hscrollbar::-webkit-scrollbar,
+        .output-scroll::-webkit-scrollbar,.stdin-scroll::-webkit-scrollbar{width:5px;height:5px}
+        .CodeMirror-vscrollbar::-webkit-scrollbar-track,.CodeMirror-hscrollbar::-webkit-scrollbar-track,
+        .output-scroll::-webkit-scrollbar-track,.stdin-scroll::-webkit-scrollbar-track{background:transparent}
+        .CodeMirror-vscrollbar::-webkit-scrollbar-thumb,.CodeMirror-hscrollbar::-webkit-scrollbar-thumb,
+        .output-scroll::-webkit-scrollbar-thumb,.stdin-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+        .CodeMirror-vscrollbar::-webkit-scrollbar-thumb:hover,.output-scroll::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
+
+        @keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(34,197,94,.35)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+        @keyframes fade-up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+        .anim-fade-up{animation:fade-up .25s ease-out both}
+        .anim-pulse{animation:pulse-ring 1.4s ease-in-out infinite}
+        .anim-spin{animation:spin .7s linear infinite}
+        .anim-blink{animation:blink 1s step-end infinite}
+
+        .toast-container{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+        .toast-item{padding:10px 18px;border-radius:10px;font-size:13px;font-weight:500;transform:translateX(140%);transition:transform .35s cubic-bezier(.22,1,.36,1);backdrop-filter:blur(12px);display:flex;align-items:center;gap:8px}
+        .toast-item.visible{transform:translateX(0)}
+        .toast-success{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:#4ade80}
+        .toast-error{background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.25);color:#fb7185}
+
+        .panel-divider{width:3px;background:var(--border);cursor:col-resize;transition:background .2s;position:relative;flex-shrink:0}
+        .panel-divider:hover,.panel-divider.active{background:var(--accent)}
+        .panel-divider::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:40px;border-radius:2px;background:var(--muted);opacity:0;transition:opacity .2s}
+        .panel-divider:hover::after{opacity:.5}
+        *:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+        @media(max-width:768px){
+            .main-layout{flex-direction:column!important}
+            .editor-panel,.output-panel{width:100%!important}
+            .editor-panel{height:55%!important}
+            .output-panel{height:45%!important}
+            .panel-divider{width:100%!important;height:3px!important;cursor:row-resize!important}
+            .hide-mobile{display:none!important}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+    </style>
+</head>
+<body>
+
+    <div class="glow-orb glow-1"></div>
+    <div class="glow-orb glow-2"></div>
+    <div class="glow-orb glow-3"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="relative z-10 flex flex-col h-screen">
+        <header style="background:var(--surface);">
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);border:1px solid rgba(34,197,94,.25);">
+                            <i class="fa-brands fa-java text-sm" style="color:var(--accent);"></i>
+                        </div>
+                        <h1 class="text-lg font-bold tracking-tight">Java<span style="color:var(--accent);">Forge</span></h1>
+                    </div>
+                    <!-- Server status badge -->
+                    <div id="serverBadge" class="hide-mobile flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-md text-[11px] font-medium"
+                         style="background:var(--card);color:var(--muted);border:1px solid var(--border);transition:all .3s;">
+                        <span class="w-1.5 h-1.5 rounded-full inline-block anim-blink" style="background:var(--muted);"></span>
+                        Checking...
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="downloadCode()" title="Download .java file" aria-label="Download code"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:brightness-125 active:scale-90"
+                        style="background:var(--card);border:1px solid var(--border);color:var(--muted);">
+                        <i class="fa-solid fa-download text-xs"></i>
+                    </button>
+                    <button id="runBtn" onclick="runCode()" aria-label="Run code"
+                        class="flex items-center gap-2 px-5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 hover:brightness-110 active:scale-[.97]"
+                        style="background:var(--accent);color:#090c0b;">
+                        <i class="fa-solid fa-play text-[10px]"></i><span>Run</span>
+                    </button>
+                    <button onclick="clearOutput()" title="Clear output" aria-label="Clear output"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:brightness-125 active:scale-90"
+                        style="background:var(--card);border:1px solid var(--border);color:var(--muted);">
+                        <i class="fa-solid fa-eraser text-xs"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="header-glow"></div>
+        </header>
+
+        <main class="flex-1 flex main-layout overflow-hidden">
+            <section class="editor-panel flex flex-col" style="width:58%;" aria-label="Code editor">
+                <div class="flex items-center justify-between px-4 py-1.5 text-[11px]" style="background:var(--surface);border-bottom:1px solid var(--border);color:var(--muted);">
+                    <div class="flex items-center gap-4">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-regular fa-file-code text-[10px]"></i>
+                            <span id="fileName" style="color:var(--text-dim);">Main.java</span>
+                        </span>
+                        <span id="cursorInfo">Ln 1, Col 1</span>
+                    </div>
+                    <div class="flex items-center gap-4 hide-mobile">
+                        <span><kbd class="px-1.5 py-0.5 rounded text-[10px]" style="background:var(--card);border:1px solid var(--border);">Ctrl+Enter</kbd> Run</span>
+                        <span><kbd class="px-1.5 py-0.5 rounded text-[10px]" style="background:var(--card);border:1px solid var(--border);">Ctrl+/</kbd> Comment</span>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-hidden" style="background:var(--bg);">
+                    <textarea id="codeEditor"></textarea>
+                </div>
+            </section>
+
+            <div class="panel-divider" id="panelDivider" role="separator" aria-label="Resize panels"></div>
+
+            <section class="output-panel flex flex-col" style="width:42%;" aria-label="Output panel">
+                <div class="flex items-center" style="background:var(--surface);border-bottom:1px solid var(--border);">
+                    <button class="tab-btn active-tab px-4 py-2 text-[12px] font-medium transition-colors" data-tab="output"
+                        style="border-bottom:2px solid var(--accent);color:var(--accent);">
+                        <i class="fa-solid fa-terminal mr-1.5 text-[10px]"></i>Output
+                    </button>
+                    <button class="tab-btn px-4 py-2 text-[12px] font-medium transition-colors" data-tab="stdin"
+                        style="border-bottom:2px solid transparent;color:var(--muted);">
+                        <i class="fa-solid fa-keyboard mr-1.5 text-[10px]"></i>Stdin
+                    </button>
+                    <div class="flex-1"></div>
+                    <button onclick="copyOutput()" title="Copy output" aria-label="Copy output"
+                        class="mr-2 w-6 h-6 rounded flex items-center justify-center transition-colors hover:brightness-150"
+                        style="color:var(--muted);">
+                        <i class="fa-regular fa-copy text-[10px]"></i>
+                    </button>
+                    <div id="statusIndicator" class="flex items-center gap-1.5 text-[11px] pr-3" style="color:var(--muted);">
+                        <span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span>
+                        Ready
+                    </div>
+                </div>
+
+                <div id="outputPane" class="flex-1 overflow-auto p-4 output-scroll" style="background:var(--bg);">
+                    <div id="outputContent" class="text-[13px] leading-relaxed whitespace-pre-wrap" style="font-family:'JetBrains Mono',monospace;color:var(--muted);">
+<span style="color:var(--accent);opacity:.7;">// Write your Java code and hit Run</span>
+<span style="color:var(--muted);opacity:.4;">
+//
+//   Ctrl+Enter to run
+//   Ctrl+/ to comment
+//   Drag divider to resize</span></div>
+                </div>
+
+                <div id="stdinPane" class="flex-1 overflow-hidden p-4 hidden" style="background:var(--bg);">
+                    <label for="stdinInput" class="block text-[11px] font-medium mb-2" style="color:var(--muted);">
+                        Standard Input
+                    </label>
+                    <textarea id="stdinInput" spellcheck="false"
+                        class="w-full h-[calc(100%-32px)] p-3 rounded-lg text-[13px] resize-none stdin-scroll"
+                        style="background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;outline:none;transition:border-color .2s;"
+                        onfocus="this.style.borderColor='var(--accent)'"
+                        onblur="this.style.borderColor='var(--border)'"
+                        placeholder="Enter input values here..."></textarea>
+                </div>
+
+                <div id="outputFooter" class="items-center justify-between px-4 py-1.5 text-[11px] hidden" style="background:var(--surface);border-top:1px solid var(--border);color:var(--muted);">
+                    <span id="execTime"></span>
+                    <div class="flex items-center gap-3">
+                        <span id="backendUsed"></span>
+                        <span id="exitStatus"></span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    // ── Default code ────────────────────────────────────────────────────────
+    const defaultCode = `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}`;
+
+    // ── Backend config ───────────────────────────────────────────────────────
+    // Connect to current server by default (works on localhost:3000 and Cloud Run preview)
+    const LOCAL_SERVER = '';
+    const CLOUD_SERVER = 'https://java-compiler-suro.onrender.com';
+
+    let localServerAvailable = false;
+    let cloudServerAvailable = false;
+
+    const fixTip = `
+        <ul class="list-disc pl-4 space-y-1">
+            <li>Check syntax errors or missing semicolons.</li>
+            <li>Ensure the public class name matches or use <code class="text-amber-400">public class Main</code>.</li>
+            <li>Verify standard input values if your code reads from <code class="text-amber-400">Scanner</code>.</li>
+        </ul>
+    `;
+
+    async function checkServerStatus() {
+        const badge = document.getElementById('serverBadge');
+        // 1. Check local server
+        try {
+            const resp = await fetch((LOCAL_SERVER || '') + '/health', { signal: AbortSignal.timeout(3000) });
+            if (resp.ok) {
+                const data = await resp.json();
+                localServerAvailable = true;
+                const jdkName = data.jdk ? (data.jdk.split(' ')[0] + ' ' + (data.jdk.split(' ')[1] || '')) : 'JDK';
+                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> &#x26A1; ${jdkName}`;
+                badge.style.color = 'var(--accent)';
+                badge.style.borderColor = 'rgba(34,197,94,.3)';
+                return;
+            }
+        } catch(e) {}
+
+        // 2. Try Cloud JDK (Render)
+        try {
+            const resp = await fetch(CLOUD_SERVER + '/health', { signal: AbortSignal.timeout(3000) });
+            if (resp.ok) {
+                cloudServerAvailable = true;
+                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> &#x2601;&#xFE0F; Cloud JDK 21';
+                badge.style.color = 'var(--accent)';
+                badge.style.borderColor = 'rgba(34,197,94,.3)';
+                return;
+            }
+        } catch(e) {}
+
+        // 3. Fallback badge
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--warning);"></span> Online Mode';
+        badge.style.color = 'var(--warning)';
+        badge.style.borderColor = 'rgba(234,179,8,.25)';
+    }
+
+    checkServerStatus();
+
+    // ── CodeMirror setup ─────────────────────────────────────────────────────
+    const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
+        mode:'text/x-java', lineNumbers:true, matchBrackets:true, autoCloseBrackets:true,
+        styleActiveLine:true, indentUnit:4, tabSize:4, indentWithTabs:false, lineWrapping:false,
+        extraKeys: {
+            'Ctrl-Enter':runCode, 'Cmd-Enter':runCode,
+            'Ctrl-/':'toggleComment', 'Cmd-/':'toggleComment',
+            'Tab': function(cm) { if(cm.somethingSelected()) cm.indentSelection('add'); else cm.replaceSelection('    ','end'); }
+        }
+    });
+    editor.setValue(defaultCode);
+    editor.on('cursorActivity', function() {
+        const c = editor.getCursor();
+        document.getElementById('cursorInfo').textContent = `Ln ${c.line+1}, Col ${c.ch+1}`;
+    });
+    editor.on('change', function() {
+        const m = editor.getValue().match(/public\s+class\s+(\w+)/);
+        document.getElementById('fileName').textContent = (m?m[1]:'Main') + '.java';
+    });
+    editor.refresh();
+    setTimeout(() => editor.focus(), 150);
+    window.addEventListener('resize', () => editor.refresh());
+
+    // ── Tab switching ────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const t = this.dataset.tab;
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.style.borderBottomColor='transparent';
+                b.style.color='var(--muted)';
+                b.classList.remove('active-tab');
+            });
+            this.style.borderBottomColor='var(--accent)';
+            this.style.color='var(--accent)';
+            this.classList.add('active-tab');
+            document.getElementById('outputPane').classList.toggle('hidden', t!=='output');
+            document.getElementById('stdinPane').classList.toggle('hidden', t!=='stdin');
+        });
+    });
+
+    // ── Panel resize ─────────────────────────────────────────────────────────
+    (function() {
+        const div=document.getElementById('panelDivider'),
+              ep=document.querySelector('.editor-panel'),
+              op=document.querySelector('.output-panel');
+        let drag=false;
+        div.addEventListener('mousedown', e => {
+            drag=true;
+            div.classList.add('active');
+            document.body.style.cursor='col-resize';
+            document.body.style.userSelect='none';
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', e => {
+            if(!drag) return;
+            const r=ep.parentElement.getBoundingClientRect();
+            let ratio = window.innerWidth<=768
+                ? (e.clientY-r.top)/r.height
+                : (e.clientX-r.left)/r.width;
+            ratio=Math.max(.25,Math.min(.75,ratio));
+            ep.style.width=(ratio*100)+'%';
+            op.style.width=((1-ratio)*100)+'%';
+            editor.refresh();
+        });
+        document.addEventListener('mouseup', () => {
+            if(drag){
+                drag=false;
+                div.classList.remove('active');
+                document.body.style.cursor='';
+                document.body.style.userSelect='';
+            }
+        });
+    })();
+
+    // ── Utilities ────────────────────────────────────────────────────────────
+    function extractClassName(code) {
+        const m = code.match(/public\s+class\s+(\w+)/);
+        return m ? m[1] : 'Main';
+    }
+
+    let isRunning=false, lastOutputText='';
+
+    // ── Execute via local server ─────────────────────────────────────────────
+    async function runViaLocal(code, stdin) {
+        const resp = await fetch((LOCAL_SERVER || '') + '/execute', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({code, stdin}),
+            signal: AbortSignal.timeout(35000)
+        });
+        if (!resp.ok) throw new Error(`Local server HTTP ${resp.status}`);
+        return resp.json();
+    }
+
+    // ── Execute via Cloud JDK server (Render) ─────────────────────────────────
+    async function runViaCloud(code, stdin) {
+        const resp = await fetch(CLOUD_SERVER + '/execute', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({code, stdin}),
+            signal: AbortSignal.timeout(35000)
+        });
+        if (!resp.ok) throw new Error(`Cloud server HTTP ${resp.status}`);
+        return resp.json();
+    }
+
+    // ── Execute via Rextester (online fallback) ───────────────────────────────
+    async function runViaRextester(code, stdin) {
+        const safeCode = code.replace(/\bpublic(\s+class\s+\w+)/, '$1');
+        const params = new URLSearchParams({
+            LanguageChoiceWrapper: '4',
+            EditorChoiceWrapper: '1',
+            LayoutChoiceWrapper: '1',
+            Program: safeCode,
+            Input: stdin,
+            CompilerArgs: ''
+        });
+        const resp = await fetch('https://rextester.com/rundotnet/run', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: params.toString(),
+            signal: AbortSignal.timeout(35000)
+        });
+        if (!resp.ok) throw new Error(`Rextester HTTP ${resp.status}`);
+        const d = await resp.json();
+        if (d.NotAvailable) throw new Error('Rextester service unavailable');
+        return {
+            stdout: d.Result  || '',
+            stderr: d.Errors  || '',
+            exitCode: d.Errors ? 1 : 0
+        };
+    }
+
+    // ── Main run function ─────────────────────────────────────────────────────
+    async function runCode() {
+        if(isRunning) return;
+        isRunning = true;
+
+        await checkServerStatus();
+
+        const runBtn    = document.getElementById('runBtn');
+        const status    = document.getElementById('statusIndicator');
+        const outputEl  = document.getElementById('outputContent');
+        const footer    = document.getElementById('outputFooter');
+
+        document.querySelector('[data-tab="output"]').click();
+        runBtn.innerHTML = '<i class="fa-solid fa-circle-notch anim-spin text-[10px]"></i><span>Running</span>';
+        runBtn.style.opacity = '.75';
+        runBtn.style.pointerEvents = 'none';
+        runBtn.classList.add('anim-pulse');
+        footer.classList.add('hidden');
+        footer.style.display = 'none';
+        lastOutputText = '';
+
+        const code  = editor.getValue();
+        const stdin = document.getElementById('stdinInput').value;
+        let result=null, usedBackend=null, lastError=null;
+        const t0 = performance.now();
+
+        // ── Try 1: Local JDK server ───────────────────────────────────────────
+        if (localServerAvailable) {
+            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block anim-blink" style="background:var(--warning);"></span> Compiling...';
+            status.style.color = 'var(--warning)';
+            outputEl.innerHTML = '<span style="color:var(--warning);"><i class="fa-solid fa-gear anim-spin mr-2"></i>Compiling with local JDK...</span>';
+            try {
+                result = await runViaLocal(code, stdin);
+                usedBackend = '&#x26A1; Local JDK';
+            } catch(e) {
+                lastError = e;
+            }
+        }
+
+        // ── Try 2: Render Cloud JDK ───────────────────────────────────────────
+        if (!result) {
+            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block anim-blink" style="background:var(--warning);"></span> Compiling...';
+            status.style.color = 'var(--warning)';
+            outputEl.innerHTML = '<span style="color:var(--warning);"><i class="fa-solid fa-gear anim-spin mr-2"></i>Compiling on Cloud JDK 21...</span>';
+            try {
+                result = await runViaCloud(code, stdin);
+                usedBackend = '&#x2601;&#xFE0F; Cloud JDK 21';
+            } catch(e) {
+                lastError = e;
+            }
+        }
+
+        // ── Try 3: Rextester online fallback ──────────────────────────────────
+        if (!result) {
+            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block anim-blink" style="background:var(--warning);"></span> Rextester...';
+            status.style.color = 'var(--warning)';
+            outputEl.innerHTML = '<span style="color:var(--warning);"><i class="fa-solid fa-gear anim-spin mr-2"></i>Connecting to fallback server...</span>';
+            try {
+                result = await runViaRextester(code, stdin);
+                usedBackend = 'Rextester';
+            } catch(e) {
+                lastError = e;
+            }
+        }
+
+        const elapsed = ((performance.now()-t0)/1000).toFixed(2);
+
+        if (result) {
+            renderResult(result, elapsed, usedBackend);
+        } else {
+            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--error);"></span> Failed';
+            status.style.color = 'var(--error)';
+            outputEl.innerHTML = `
+<div class="anim-fade-up" style="color:var(--error);font-weight:600;font-size:14px;">
+    <i class="fa-solid fa-triangle-exclamation mr-2"></i>Execution Failed
+</div>
+<div class="anim-fade-up mt-2" style="color:var(--muted);font-size:12px;line-height:1.9;">
+    <strong style="color:var(--text-dim);">Error:</strong> ${lastError ? lastError.message : 'Unknown error'}
+</div>
+<div class="anim-fade-up mt-3 px-3 py-2.5 rounded-lg" style="background:var(--card);border:1px solid var(--border);font-size:12px;line-height:1.9;">
+    <div style="color:var(--warning);font-weight:600;margin-bottom:6px;">
+        <i class="fa-solid fa-lightbulb mr-1"></i>How to fix:
+    </div>
+    ${fixTip}
+</div>`;
+            showToast('Execution failed', 'error');
+        }
+
+        runBtn.innerHTML = '<i class="fa-solid fa-play text-[10px]"></i><span>Run</span>';
+        runBtn.style.opacity = '1';
+        runBtn.style.pointerEvents = 'auto';
+        runBtn.classList.remove('anim-pulse');
+        isRunning = false;
+    }
+
+    // ── Render result ─────────────────────────────────────────────────────────
+    function renderResult(r, elapsed, backendName) {
+        const outputEl = document.getElementById('outputContent');
+        const status   = document.getElementById('statusIndicator');
+        const footer   = document.getElementById('outputFooter');
+        const hasErr   = !!r.stderr && r.stderr.trim().length > 0;
+        const hasOut   = !!r.stdout && r.stdout.trim().length > 0;
+        outputEl.innerHTML = '';
+        lastOutputText = '';
+
+        if (hasErr && !hasOut) {
+            // ── Compile / runtime error only ────────────────────────────────
+            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--error);"></span> Error';
+            status.style.color = 'var(--error)';
+            const d = document.createElement('div');
+            d.className = 'anim-fade-up';
+            d.style.cssText = 'color:var(--error);white-space:pre-wrap;word-break:break-word;line-height:1.7;padding:12px;border-radius:8px;background:var(--error-bg);border:1px solid rgba(244,63,94,.15);font-size:13px;';
+            d.textContent = r.stderr.trim();
+            outputEl.appendChild(d);
+            lastOutputText = r.stderr;
+
+        } else if (hasErr && hasOut) {
+            // ── Output + exception ───────────────────────────────────────────
+            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--warning);"></span> Exception';
+            status.style.color = 'var(--warning)';
+            appendOutputLines(outputEl, r.stdout);
+            const d = document.createElement('div');
+            d.className = 'anim-fade-up mt-3';
+            d.style.cssText = 'color:var(--error);white-space:pre-wrap;word-break:break-word;line-height:1.7;padding:10px;border-radius:8px;background:var(--error-bg);border:1px solid rgba(244,63,94,.12);font-size:12px;';
+            d.textContent = r.stderr.trim();
+            outputEl.appendChild(d);
+            lastOutputText = r.stdout + '\n' + r.stderr;
+
+        } else if (hasOut) {
+            // ── Clean output ─────────────────────────────────────────────────
+            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> Success';
+            status.style.color = 'var(--accent)';
+            appendOutputLines(outputEl, r.stdout);
+            lastOutputText = r.stdout;
+            showToast('Done', 'success');
+
+        } else {
+            // ── No output ────────────────────────────────────────────────────
+            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> Done';
+            status.style.color = 'var(--accent)';
+            outputEl.innerHTML = '<span class="anim-fade-up" style="color:var(--muted);">(No output)</span>';
+            lastOutputText = '';
+        }
+
+        footer.classList.remove('hidden');
+        footer.style.display = 'flex';
+        document.getElementById('execTime').textContent = `Time: ${elapsed}s`;
+        document.getElementById('backendUsed').innerHTML = `<span style="color:var(--muted);">via ${backendName}</span>`;
+        document.getElementById('exitStatus').innerHTML = r.exitCode === 0
+            ? `<span style="color:var(--accent);">Exit 0</span>`
+            : `<span style="color:var(--error);">Exit ${r.exitCode}</span>`;
+        document.getElementById('outputPane').scrollTop = 0;
+    }
+
+    function appendOutputLines(container, text) {
+        const wrap = document.createElement('div');
+        text.split('\n').forEach((line, i) => {
+            const el = document.createElement('div');
+            el.className = 'anim-fade-up';
+            el.style.animationDelay = Math.min(i*15, 500) + 'ms';
+            el.style.lineHeight = '1.75';
+            if (line.trim()) {
+                const arrow = document.createElement('span');
+                arrow.style.cssText = 'color:var(--muted);margin-right:10px;user-select:none;';
+                arrow.textContent = '>';
+                const txt = document.createElement('span');
+                txt.style.color = 'var(--text)';
+                txt.textContent = line;
+                el.appendChild(arrow);
+                el.appendChild(txt);
+            } else {
+                el.innerHTML = '&nbsp;';
+            }
+            wrap.appendChild(el);
+        });
+        container.appendChild(wrap);
+    }
+
+    // ── Toolbar actions ───────────────────────────────────────────────────────
+    function clearOutput() {
+        document.getElementById('outputContent').innerHTML =
+            '<span style="color:var(--accent);opacity:.7;">// Cleared</span>';
+        const f = document.getElementById('outputFooter');
+        f.classList.add('hidden');
+        f.style.display = 'none';
+        document.getElementById('statusIndicator').innerHTML =
+            '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> Ready';
+        document.getElementById('statusIndicator').style.color = 'var(--muted)';
+        lastOutputText = '';
+    }
+
+    function copyOutput() {
+        if(!lastOutputText) { showToast('Nothing to copy', 'error'); return; }
+        navigator.clipboard.writeText(lastOutputText)
+            .then(() => showToast('Copied', 'success'))
+            .catch(() => showToast('Copy failed', 'error'));
+    }
+
+    function downloadCode() {
+        const code = editor.getValue();
+        const cn   = extractClassName(code);
+        const blob = new Blob([code], {type:'text/x-java'});
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = cn + '.java';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Downloaded', 'success');
+    }
+
+    function showToast(msg, type='success') {
+        const c = document.getElementById('toastContainer');
+        const t = document.createElement('div');
+        t.className = `toast-item toast-${type}`;
+        t.innerHTML = (type==='success'
+            ? '<i class="fa-solid fa-check-circle text-[12px]"></i>'
+            : '<i class="fa-solid fa-circle-xmark text-[12px]"></i>') + `<span>${msg}</span>`;
+        c.appendChild(t);
+        requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('visible')));
+        setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 400); }, 2400);
+    }
+    </script>
+</body>
+</html>
