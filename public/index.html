@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JavaForge — Online Java Compiler</title>
-    <meta name="description" content="Online Java compiler and execution environment">
+    <meta name="description" content="Professional online Java IDE, compiler and execution environment">
     <meta property="og:title" content="JavaForge — Online Java Compiler">
-    <meta property="og:description" content="Online Java compiler and execution environment">
+    <meta property="og:description" content="Professional online Java IDE, compiler and execution environment">
 
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Professional Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- CodeMirror & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,655 +26,906 @@
 
     <style>
         :root {
-            --bg: #090c0b;
-            --surface: #111614;
-            --card: #171e1b;
-            --border: #253029;
-            --border-light: #2f3e36;
-            --text: #e4ece7;
-            --text-dim: #c0cfc6;
-            --muted: #5e7a6c;
-            --accent: #22c55e;
-            --accent-glow: rgba(34,197,94,0.1);
-            --accent-glow-strong: rgba(34,197,94,0.2);
-            --error: #f43f5e;
-            --error-bg: rgba(244,63,94,0.08);
-            --warning: #eab308;
+            /* Industrial Professional Dark Theme */
+            --bg-base: #09090b;
+            --bg-panel: #121215;
+            --bg-subtle: #18181b;
+            --bg-hover: #27272a;
+            --border-color: #27272a;
+            --border-light: #3f3f46;
+            --text-main: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-green: #10b981;
+            --accent-green-hover: #059669;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --editor-bg: #0c0c0e;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body.light-theme {
+            --bg-base: #f4f4f5;
+            --bg-panel: #ffffff;
+            --bg-subtle: #f1f1f4;
+            --bg-hover: #e4e4e7;
+            --border-color: #e4e4e7;
+            --border-light: #d4d4d8;
+            --text-main: #18181b;
+            --text-secondary: #52525b;
+            --text-muted: #a1a1aa;
+            --accent-green: #059669;
+            --accent-green-hover: #047857;
+            --accent-red: #dc2626;
+            --accent-amber: #d97706;
+            --editor-bg: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
             height: 100vh;
             overflow: hidden;
+            user-select: none;
+            font-size: 13px;
         }
-        body::before {
-            content: '';
-            position: fixed; inset: 0;
-            background-image:
-                linear-gradient(rgba(34,197,94,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(34,197,94,0.02) 1px, transparent 1px);
-            background-size: 48px 48px;
-            pointer-events: none; z-index: 0;
-        }
-        .glow-orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; opacity:0.7; }
-        .glow-1 { width:500px;height:500px;background:rgba(34,197,94,0.05);top:-150px;left:-100px;animation:d1 25s ease-in-out infinite; }
-        .glow-2 { width:350px;height:350px;background:rgba(34,197,94,0.04);bottom:-100px;right:-50px;animation:d2 30s ease-in-out infinite; }
-        .glow-3 { width:250px;height:250px;background:rgba(16,185,129,0.03);top:40%;left:50%;animation:d3 20s ease-in-out infinite; }
-        @keyframes d1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(100px,80px) scale(1.1)}}
-        @keyframes d2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-80px,-60px) scale(1.05)}}
-        @keyframes d3{0%,100%{transform:translate(0,0)}33%{transform:translate(-40px,30px)}66%{transform:translate(30px,-20px)}}
-        .header-glow { height:1px; background:linear-gradient(90deg,transparent,var(--accent-glow-strong),rgba(34,197,94,0.4),var(--accent-glow-strong),transparent); }
 
+        /* Fluid Subtle Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(3px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+        }
+
+        .anim-fade { animation: fadeIn 0.15s ease-out forwards; }
+        .pulse-live { animation: pulseGlow 1.8s ease-in-out infinite; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(161, 161, 170, 0.2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(161, 161, 170, 0.35); }
+
+        /* CodeMirror Precision Configuration */
         .CodeMirror {
-            font-family:'JetBrains Mono',monospace !important;
-            font-size:13.5px !important; line-height:1.75 !important;
-            height:100% !important; background:transparent !important;
-            color:var(--text) !important; padding:4px 0;
+            font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace !important;
+            font-size: 13.5px !important;
+            line-height: 1.6 !important;
+            height: 100% !important;
+            background: var(--editor-bg) !important;
+            color: var(--text-main) !important;
         }
-        .CodeMirror-gutters { background:transparent !important; border-right:1px solid var(--border) !important; padding-right:4px; }
-        .CodeMirror-linenumber { color:#3d5448 !important; font-size:11px !important; padding:0 10px !important; }
-        .CodeMirror-activeline-background { background:rgba(34,197,94,0.04) !important; }
-        .CodeMirror-cursor { border-left:2px solid var(--accent) !important; }
-        .CodeMirror-selected { background:rgba(34,197,94,0.13) !important; }
-        .CodeMirror-focused .CodeMirror-selected { background:rgba(34,197,94,0.18) !important; }
-        .CodeMirror-matchingbracket { color:var(--accent)!important; font-weight:700!important; background:rgba(34,197,94,0.2)!important; border-bottom:1px solid var(--accent); }
-        .CodeMirror-nonmatchingbracket { color:var(--error)!important; background:rgba(244,63,94,0.15)!important; }
-        .cm-s-default .cm-keyword{color:#c084fc!important;font-weight:500}
-        .cm-s-default .cm-atom{color:#f472b6!important}
-        .cm-s-default .cm-number{color:#fb923c!important}
-        .cm-s-default .cm-def{color:#60a5fa!important}
-        .cm-s-default .cm-variable{color:var(--text)!important}
-        .cm-s-default .cm-variable-2{color:#67e8f9!important}
-        .cm-s-default .cm-variable-3,.cm-s-default .cm-type{color:#fbbf24!important}
-        .cm-s-default .cm-property{color:#a78bfa!important}
-        .cm-s-default .cm-operator{color:#f0abfc!important}
-        .cm-s-default .cm-comment{color:#4ade80!important;font-style:italic;opacity:.8}
-        .cm-s-default .cm-string{color:#fde68a!important}
-        .cm-s-default .cm-string-2{color:#fca5a5!important}
-        .cm-s-default .cm-meta{color:var(--muted)!important}
-        .cm-s-default .cm-qualifier{color:#fbbf24!important}
-        .cm-s-default .cm-builtin{color:#38bdf8!important}
-        .cm-s-default .cm-bracket{color:var(--text-dim)!important}
-
-        .CodeMirror-vscrollbar::-webkit-scrollbar,.CodeMirror-hscrollbar::-webkit-scrollbar,
-        .output-scroll::-webkit-scrollbar,.stdin-scroll::-webkit-scrollbar{width:5px;height:5px}
-        .CodeMirror-vscrollbar::-webkit-scrollbar-track,.CodeMirror-hscrollbar::-webkit-scrollbar-track,
-        .output-scroll::-webkit-scrollbar-track,.stdin-scroll::-webkit-scrollbar-track{background:transparent}
-        .CodeMirror-vscrollbar::-webkit-scrollbar-thumb,.CodeMirror-hscrollbar::-webkit-scrollbar-thumb,
-        .output-scroll::-webkit-scrollbar-thumb,.stdin-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
-        .CodeMirror-vscrollbar::-webkit-scrollbar-thumb:hover,.output-scroll::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
-
-        @keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(34,197,94,.35)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
-        @keyframes fade-up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-        .anim-fade-up{animation:fade-up .25s ease-out both}
-        .anim-pulse{animation:pulse-ring 1.4s ease-in-out infinite}
-        .anim-spin{animation:spin .7s linear infinite}
-        .anim-blink{animation:blink 1s step-end infinite}
-
-        .toast-container{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px}
-        .toast-item{padding:10px 18px;border-radius:10px;font-size:13px;font-weight:500;transform:translateX(140%);transition:transform .35s cubic-bezier(.22,1,.36,1);backdrop-filter:blur(12px);display:flex;align-items:center;gap:8px}
-        .toast-item.visible{transform:translateX(0)}
-        .toast-success{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:#4ade80}
-        .toast-error{background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.25);color:#fb7185}
-
-        .panel-divider{width:3px;background:var(--border);cursor:col-resize;transition:background .2s;position:relative;flex-shrink:0}
-        .panel-divider:hover,.panel-divider.active{background:var(--accent)}
-        .panel-divider::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:40px;border-radius:2px;background:var(--muted);opacity:0;transition:opacity .2s}
-        .panel-divider:hover::after{opacity:.5}
-        *:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-        @media(max-width:768px){
-            .main-layout{flex-direction:column!important}
-            .editor-panel,.output-panel{width:100%!important}
-            .editor-panel{height:55%!important}
-            .output-panel{height:45%!important}
-            .panel-divider{width:100%!important;height:3px!important;cursor:row-resize!important}
-            .hide-mobile{display:none!important}
+        .CodeMirror-gutters {
+            background: var(--editor-bg) !important;
+            border-right: 1px solid var(--border-color) !important;
+            width: 44px;
         }
-        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+        .CodeMirror-linenumber {
+            color: var(--text-muted) !important;
+            font-size: 11.5px !important;
+            padding-right: 10px !important;
+            opacity: 0.6;
+        }
+        .CodeMirror-activeline-background {
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+        body.light-theme .CodeMirror-activeline-background {
+            background: rgba(0, 0, 0, 0.03) !important;
+        }
+        .CodeMirror-activeline .CodeMirror-linenumber {
+            color: var(--text-main) !important;
+            opacity: 1;
+            font-weight: 600;
+        }
+        .CodeMirror-cursor {
+            border-left: 2px solid var(--accent-green) !important;
+        }
+        .CodeMirror-selected {
+            background: rgba(16, 185, 129, 0.2) !important;
+        }
+        .CodeMirror-matchingbracket {
+            color: #ffffff !important;
+            background: rgba(16, 185, 129, 0.35) !important;
+            border-radius: 2px;
+        }
+
+        /* Java Compiler Syntax Highlighting */
+        .cm-s-default .cm-keyword { color: #f43f5e !important; font-weight: 500; }
+        .cm-s-default .cm-def { color: #38bdf8 !important; }
+        .cm-s-default .cm-variable { color: var(--text-main) !important; }
+        .cm-s-default .cm-variable-2 { color: #93c5fd !important; }
+        .cm-s-default .cm-variable-3, .cm-s-default .cm-type { color: #2dd4bf !important; }
+        .cm-s-default .cm-property { color: #60a5fa !important; }
+        .cm-s-default .cm-operator { color: #e2e8f0 !important; }
+        .cm-s-default .cm-comment { color: #71717a !important; font-style: italic; }
+        .cm-s-default .cm-string { color: #fde047 !important; }
+        .cm-s-default .cm-number { color: #fb923c !important; }
+
+        /* Light Theme Syntax */
+        body.light-theme .cm-s-default .cm-keyword { color: #be123c !important; }
+        body.light-theme .cm-s-default .cm-def { color: #0369a1 !important; }
+        body.light-theme .cm-s-default .cm-variable-2 { color: #1d4ed8 !important; }
+        body.light-theme .cm-s-default .cm-variable-3, body.light-theme .cm-s-default .cm-type { color: #0f766e !important; }
+        body.light-theme .cm-s-default .cm-comment { color: #a1a1aa !important; }
+        body.light-theme .cm-s-default .cm-string { color: #b45309 !important; }
+        body.light-theme .cm-s-default .cm-number { color: #c2410c !important; }
+
+        /* Resizer bar */
+        .resizer-bar {
+            width: 5px;
+            cursor: col-resize;
+            background: var(--border-color);
+            transition: background 0.15s;
+            z-index: 10;
+        }
+        .resizer-bar:hover, .resizer-bar.dragging {
+            background: var(--accent-green);
+        }
+
+        /* Interactive buttons */
+        .compiler-btn {
+            transition: all 0.12s ease;
+        }
+        .compiler-btn:hover {
+            transform: translateY(-0.5px);
+        }
+        .compiler-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Error line highlight */
+        .error-line {
+            background: rgba(239, 68, 68, 0.15) !important;
+            border-left: 2px solid var(--accent-red) !important;
+        }
     </style>
 </head>
-<body>
+<body class="flex flex-col h-screen overflow-hidden">
 
-    <div class="glow-orb glow-1"></div>
-    <div class="glow-orb glow-2"></div>
-    <div class="glow-orb glow-3"></div>
-    <div class="toast-container" id="toastContainer"></div>
+    <!-- ── 1. Clean Professional Compiler Header ──────────────────────────── -->
+    <header class="h-12 border-b flex items-center justify-between px-4 flex-shrink-0 select-none z-20"
+            style="background: var(--bg-panel); border-color: var(--border-color);">
+        
+        <!-- Left: Logo & Language Environment -->
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded flex items-center justify-center font-bold text-white text-xs shadow-sm bg-neutral-800 border border-neutral-700">
+                    <i class="fa-brands fa-java text-sm text-amber-500"></i>
+                </div>
+                <div class="flex items-baseline gap-1.5">
+                    <span class="font-semibold text-sm tracking-tight text-white" id="brandText">JavaForge</span>
+                    <span class="text-xs text-neutral-400 font-mono">Compiler</span>
+                </div>
+            </div>
 
-    <div class="relative z-10 flex flex-col h-screen">
-        <header style="background:var(--surface);">
-            <div class="flex items-center justify-between px-4 py-2.5">
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);border:1px solid rgba(34,197,94,.25);">
-                            <i class="fa-brands fa-java text-sm" style="color:var(--accent);"></i>
-                        </div>
-                        <h1 class="text-lg font-bold tracking-tight">Java<span style="color:var(--accent);">Forge</span></h1>
-                    </div>
-                    <!-- Server status badge -->
-                    <div id="serverBadge" class="hide-mobile flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-md text-[11px] font-medium"
-                         style="background:var(--card);color:var(--muted);border:1px solid var(--border);transition:all .3s;">
-                        <span class="w-1.5 h-1.5 rounded-full inline-block anim-blink" style="background:var(--muted);"></span>
-                        Checking...
+            <div class="h-4 w-px bg-neutral-800 mx-1"></div>
+
+            <!-- Language / Version Pill -->
+            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono border border-neutral-800 bg-neutral-900/60 text-neutral-400"
+                 title="Running on standard OpenJDK">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-live"></span>
+                <span id="backendVersionBadge">Java 17 (OpenJDK)</span>
+            </div>
+        </div>
+
+        <!-- Center: Primary Execution Controls -->
+        <div class="flex items-center gap-2">
+            <!-- RUN BUTTON -->
+            <button id="runButton" onclick="executeJava()" title="Run Code (Ctrl+Enter or F5)"
+                    class="compiler-btn flex items-center gap-2 px-4 py-1.5 rounded-md font-semibold text-xs text-white shadow-sm"
+                    style="background: var(--accent-green);">
+                <i id="runIcon" class="fa-solid fa-play text-[11px]"></i>
+                <span id="runText">Run</span>
+                <span class="hidden sm:inline text-[10px] opacity-75 font-mono ml-0.5">Ctrl+Enter</span>
+            </button>
+
+            <!-- CLEAR OUTPUT -->
+            <button onclick="clearConsole()" title="Clear Console Output"
+                    class="compiler-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-neutral-300 hover:text-white border border-neutral-800 bg-neutral-900 hover:bg-neutral-800">
+                <i class="fa-solid fa-eraser text-xs text-neutral-400"></i>
+                <span class="hidden sm:inline">Clear</span>
+            </button>
+
+            <!-- RESET CODE -->
+            <button onclick="resetBoilerplate()" title="Reset to minimal Main.java template"
+                    class="compiler-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-neutral-300 hover:text-white border border-neutral-800 bg-neutral-900 hover:bg-neutral-800">
+                <i class="fa-solid fa-arrow-rotate-left text-xs text-neutral-400"></i>
+                <span class="hidden sm:inline">Reset</span>
+            </button>
+        </div>
+
+        <!-- Right: Utility Controls -->
+        <div class="flex items-center gap-2">
+            <!-- Stdin Toggle -->
+            <button id="stdinToggleBtn" onclick="toggleStdinPanel()" title="Toggle Standard Input (System.in)"
+                    class="compiler-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-neutral-300 border border-neutral-800 bg-neutral-900 hover:bg-neutral-800">
+                <i class="fa-solid fa-terminal text-xs text-neutral-400"></i>
+                <span>Stdin</span>
+                <span id="stdinDot" class="hidden w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            </button>
+
+            <!-- Code Formatter -->
+            <button onclick="formatJavaCode()" title="Format Code (Shift+Alt+F)"
+                    class="compiler-btn p-1.5 px-2 rounded-md text-xs text-neutral-300 hover:text-white border border-neutral-800 bg-neutral-900 hover:bg-neutral-800">
+                <i class="fa-solid fa-align-left text-xs"></i>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" title="Switch Light/Dark Theme"
+                    class="compiler-btn p-1.5 px-2 rounded-md text-xs text-neutral-300 hover:text-white border border-neutral-800 bg-neutral-900 hover:bg-neutral-800">
+                <i id="themeIcon" class="fa-solid fa-moon text-xs"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ── 2. Split Workspace: Editor (Left) & Compiler Output (Right) ───── -->
+    <div id="workspace" class="flex flex-1 overflow-hidden relative">
+
+        <!-- LEFT: Source Code Editor -->
+        <div id="editorPanel" class="flex flex-col flex-1 min-w-[280px] overflow-hidden"
+             style="background: var(--editor-bg);">
+            
+            <!-- File Tab & Details Bar -->
+            <div class="h-8 border-b flex items-center justify-between px-3 text-xs select-none flex-shrink-0"
+                 style="background: var(--bg-subtle); border-color: var(--border-color);">
+                <div class="flex items-center gap-2">
+                    <span class="flex items-center gap-1.5 font-mono text-neutral-300 font-medium">
+                        <i class="fa-solid fa-file-code text-[11px] text-amber-500"></i>
+                        <span id="fileNameLabel">Main.java</span>
+                    </span>
+                    <span id="dirtyIndicator" class="hidden text-[10px] text-neutral-500 font-mono">• edited</span>
+                </div>
+                <div class="flex items-center gap-3 text-[11px] font-mono text-neutral-500">
+                    <span id="cursorPos">Ln 1, Col 1</span>
+                    <span>|</span>
+                    <div class="flex items-center gap-1">
+                        <button onclick="changeFontSize(-1)" class="hover:text-neutral-300 px-0.5">A-</button>
+                        <span id="fontSizeLabel" class="text-neutral-400">13.5px</span>
+                        <button onclick="changeFontSize(1)" class="hover:text-neutral-300 px-0.5">A+</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- CodeMirror Editor Element -->
+            <div class="flex-1 overflow-hidden relative">
+                <textarea id="codeEditor"></textarea>
+            </div>
+        </div>
+
+        <!-- Splitter Drag Handle -->
+        <div id="resizer" class="resizer-bar flex-shrink-0"></div>
+
+        <!-- RIGHT: Compiler Output & Stdin Pane -->
+        <div id="outputPanel" class="flex flex-col flex-1 min-w-[280px] overflow-hidden"
+             style="background: var(--bg-panel); border-left: 1px solid var(--border-color);">
+            
+            <!-- Standard Input (Stdin) Section - Collapsible or Inline -->
+            <div id="stdinContainer" class="hidden flex-col border-b flex-shrink-0"
+                 style="border-color: var(--border-color); background: var(--bg-subtle);">
+                <div class="flex items-center justify-between px-3 py-1.5 text-xs text-neutral-400 font-medium select-none">
+                    <span class="flex items-center gap-1.5 font-mono text-[11px]">
+                        <i class="fa-solid fa-keyboard text-xs text-neutral-400"></i>
+                        Standard Input (System.in)
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="document.getElementById('stdinInput').value=''; updateStdinDot();" 
+                                class="text-[11px] text-neutral-500 hover:text-neutral-300">Clear</button>
+                        <button onclick="toggleStdinPanel()" class="text-neutral-500 hover:text-neutral-300">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="px-3 pb-2.5">
+                    <textarea id="stdinInput" rows="3" placeholder="Enter input for Scanner / System.in here before running..."
+                              oninput="updateStdinDot()"
+                              class="w-full p-2 rounded text-xs font-mono border outline-none resize-y text-neutral-200 placeholder-neutral-600 leading-relaxed"
+                              style="background: var(--bg-base); border-color: var(--border-color);"></textarea>
+                </div>
+            </div>
+
+            <!-- Console Header -->
+            <div class="h-8 border-b flex items-center justify-between px-3 text-xs select-none flex-shrink-0"
+                 style="background: var(--bg-subtle); border-color: var(--border-color);">
                 <div class="flex items-center gap-2">
-                    <button onclick="downloadCode()" title="Download .java file" aria-label="Download code"
-                        class="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:brightness-125 active:scale-90"
-                        style="background:var(--card);border:1px solid var(--border);color:var(--muted);">
-                        <i class="fa-solid fa-download text-xs"></i>
-                    </button>
-                    <button id="runBtn" onclick="runCode()" aria-label="Run code"
-                        class="flex items-center gap-2 px-5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 hover:brightness-110 active:scale-[.97]"
-                        style="background:var(--accent);color:#090c0b;">
-                        <i class="fa-solid fa-play text-[10px]"></i><span>Run</span>
-                    </button>
-                    <button onclick="clearOutput()" title="Clear output" aria-label="Clear output"
-                        class="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:brightness-125 active:scale-90"
-                        style="background:var(--card);border:1px solid var(--border);color:var(--muted);">
-                        <i class="fa-solid fa-eraser text-xs"></i>
+                    <span class="font-medium text-neutral-300 text-xs">Console Output</span>
+                    <span id="statusBadge" class="text-[10px] font-mono px-1.5 py-0.2 rounded border border-neutral-800 bg-neutral-900 text-neutral-400">
+                        Idle
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-2 text-[11px] font-mono text-neutral-500">
+                    <span id="execTimer" class="hidden">0ms</span>
+                    <button onclick="copyOutput()" id="copyBtn" title="Copy Output" class="hover:text-neutral-300">
+                        <i class="fa-regular fa-copy"></i>
                     </button>
                 </div>
             </div>
-            <div class="header-glow"></div>
-        </header>
 
-        <main class="flex-1 flex main-layout overflow-hidden">
-            <section class="editor-panel flex flex-col" style="width:58%;" aria-label="Code editor">
-                <div class="flex items-center justify-between px-4 py-1.5 text-[11px]" style="background:var(--surface);border-bottom:1px solid var(--border);color:var(--muted);">
-                    <div class="flex items-center gap-4">
-                        <span class="flex items-center gap-1.5">
-                            <i class="fa-regular fa-file-code text-[10px]"></i>
-                            <span id="fileName" style="color:var(--text-dim);">Main.java</span>
-                        </span>
-                        <span id="cursorInfo">Ln 1, Col 1</span>
-                    </div>
-                    <div class="flex items-center gap-4 hide-mobile">
-                        <span><kbd class="px-1.5 py-0.5 rounded text-[10px]" style="background:var(--card);border:1px solid var(--border);">Ctrl+Enter</kbd> Run</span>
-                        <span><kbd class="px-1.5 py-0.5 rounded text-[10px]" style="background:var(--card);border:1px solid var(--border);">Ctrl+/</kbd> Comment</span>
-                    </div>
+            <!-- Console Output Area -->
+            <div id="consoleArea" class="flex-1 overflow-y-auto p-3 font-mono text-xs select-text leading-relaxed space-y-1"
+                 style="background: var(--bg-base); color: var(--text-main);">
+                <div class="text-neutral-500 italic text-[12px]">
+                    // Click "Run" or press Ctrl+Enter to compile and execute Java code.
                 </div>
-                <div class="flex-1 overflow-hidden" style="background:var(--bg);">
-                    <textarea id="codeEditor"></textarea>
+            </div>
+
+            <!-- Quick Stdin Prompt Bar (Shown if program crashed from NoSuchElementException / missing input) -->
+            <div id="missingInputPrompt" class="hidden p-2.5 border-t anim-fade"
+                 style="background: var(--bg-subtle); border-color: var(--border-color);">
+                <div class="flex items-center gap-2 mb-1.5 text-amber-400 text-xs font-medium">
+                    <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                    <span>This program requires standard input (Scanner / System.in)</span>
                 </div>
-            </section>
-
-            <div class="panel-divider" id="panelDivider" role="separator" aria-label="Resize panels"></div>
-
-            <section class="output-panel flex flex-col" style="width:42%;" aria-label="Output panel">
-                <div class="flex items-center" style="background:var(--surface);border-bottom:1px solid var(--border);">
-                    <button class="tab-btn active-tab px-4 py-2 text-[12px] font-medium transition-colors" data-tab="output"
-                        style="border-bottom:2px solid var(--accent);color:var(--accent);">
-                        <i class="fa-solid fa-terminal mr-1.5 text-[10px]"></i>Output
+                <div class="flex gap-1.5">
+                    <input type="text" id="quickStdin" placeholder="Enter input value(s)..." 
+                           class="flex-1 px-2.5 py-1 rounded text-xs font-mono border outline-none text-neutral-200"
+                           style="background: var(--bg-base); border-color: var(--border-color);"
+                           onkeydown="if(event.key==='Enter') sendQuickStdinAndRun()">
+                    <button onclick="sendQuickStdinAndRun()" 
+                            class="px-3 py-1 rounded text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500">
+                        Submit &amp; Run
                     </button>
-                    <button class="tab-btn px-4 py-2 text-[12px] font-medium transition-colors" data-tab="stdin"
-                        style="border-bottom:2px solid transparent;color:var(--muted);">
-                        <i class="fa-solid fa-keyboard mr-1.5 text-[10px]"></i>Stdin
-                    </button>
-                    <div class="flex-1"></div>
-                    <button onclick="copyOutput()" title="Copy output" aria-label="Copy output"
-                        class="mr-2 w-6 h-6 rounded flex items-center justify-center transition-colors hover:brightness-150"
-                        style="color:var(--muted);">
-                        <i class="fa-regular fa-copy text-[10px]"></i>
-                    </button>
-                    <div id="statusIndicator" class="flex items-center gap-1.5 text-[11px] pr-3" style="color:var(--muted);">
-                        <span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span>
-                        Ready
-                    </div>
                 </div>
-
-                <div id="outputPane" class="flex-1 overflow-auto p-4 output-scroll" style="background:var(--bg);">
-                    <div id="outputContent" class="text-[13px] leading-relaxed whitespace-pre-wrap" style="font-family:'JetBrains Mono',monospace;color:var(--muted);">
-<span style="color:var(--accent);opacity:.7;">// Write your Java code and hit Run</span>
-<span style="color:var(--muted);opacity:.4;">
-//
-//   Ctrl+Enter to run
-//   Ctrl+/ to comment
-//   Drag divider to resize</span></div>
-                </div>
-
-                <div id="stdinPane" class="flex-1 overflow-hidden p-4 hidden" style="background:var(--bg);">
-                    <label for="stdinInput" class="block text-[11px] font-medium mb-2" style="color:var(--muted);">
-                        Standard Input
-                    </label>
-                    <textarea id="stdinInput" spellcheck="false"
-                        class="w-full h-[calc(100%-32px)] p-3 rounded-lg text-[13px] resize-none stdin-scroll"
-                        style="background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;outline:none;transition:border-color .2s;"
-                        onfocus="this.style.borderColor='var(--accent)'"
-                        onblur="this.style.borderColor='var(--border)'"
-                        placeholder="Enter input values here..."></textarea>
-                </div>
-
-                <div id="outputFooter" class="items-center justify-between px-4 py-1.5 text-[11px] hidden" style="background:var(--surface);border-top:1px solid var(--border);color:var(--muted);">
-                    <span id="execTime"></span>
-                    <div class="flex items-center gap-3">
-                        <span id="backendUsed"></span>
-                        <span id="exitStatus"></span>
-                    </div>
-                </div>
-            </section>
-        </main>
+            </div>
+        </div>
     </div>
 
+    <!-- ── 3. Toast Notifications ─────────────────────────────────────────── -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 px-3 py-1.5 rounded text-xs font-medium text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200"
+         style="background: #27272a; border: 1px solid #3f3f46;">
+    </div>
+
+    <!-- ── 4. Compiler Core Logic ─────────────────────────────────────────── -->
     <script>
-    // ── Default code ────────────────────────────────────────────────────────
-    const defaultCode = `public class Main {
+        // Clean, standard Java template
+        const DEFAULT_BOILERPLATE = `public class Main {
     public static void main(String[] args) {
         System.out.println("Hello, World!");
     }
 }`;
 
-    // ── Backend config ───────────────────────────────────────────────────────
-    // Connect to current server by default (works on localhost:3000 and Cloud Run preview)
-    const LOCAL_SERVER = '';
-    const CLOUD_SERVER = 'https://java-compiler-suro.onrender.com';
+        let editor = null;
+        let isExecuting = false;
+        let currentFontSize = 13.5;
+        let activeErrorLine = null;
+        let currentAbortController = null;
 
-    let localServerAvailable = false;
-    let cloudServerAvailable = false;
+        window.addEventListener('DOMContentLoaded', () => {
+            initSavedPreferences();
+            initCodeMirror();
+            initResizer();
+            initShortcuts();
+            fetchBackendInfo();
 
-    const fixTip = `
-        <ul class="list-disc pl-4 space-y-1">
-            <li>Check syntax errors or missing semicolons.</li>
-            <li>Ensure the public class name matches or use <code class="text-amber-400">public class Main</code>.</li>
-            <li>Verify standard input values if your code reads from <code class="text-amber-400">Scanner</code>.</li>
-        </ul>
-    `;
-
-    async function checkServerStatus() {
-        const badge = document.getElementById('serverBadge');
-        // 1. Check local server
-        try {
-            const resp = await fetch((LOCAL_SERVER || '') + '/health', { signal: AbortSignal.timeout(3000) });
-            if (resp.ok) {
-                const data = await resp.json();
-                localServerAvailable = true;
-                const jdkName = data.jdk ? (data.jdk.split(' ')[0] + ' ' + (data.jdk.split(' ')[1] || '')) : 'JDK';
-                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> &#x26A1; ${jdkName}`;
-                badge.style.color = 'var(--accent)';
-                badge.style.borderColor = 'rgba(34,197,94,.3)';
-                return;
-            }
-        } catch(e) {}
-
-        // 2. Try Cloud JDK (Render)
-        try {
-            const resp = await fetch(CLOUD_SERVER + '/health', { signal: AbortSignal.timeout(3000) });
-            if (resp.ok) {
-                cloudServerAvailable = true;
-                badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> &#x2601;&#xFE0F; Cloud JDK 21';
-                badge.style.color = 'var(--accent)';
-                badge.style.borderColor = 'rgba(34,197,94,.3)';
-                return;
-            }
-        } catch(e) {}
-
-        // 3. Fallback badge
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--warning);"></span> Online Mode';
-        badge.style.color = 'var(--warning)';
-        badge.style.borderColor = 'rgba(234,179,8,.25)';
-    }
-
-    checkServerStatus();
-
-    // ── CodeMirror setup ─────────────────────────────────────────────────────
-    const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
-        mode:'text/x-java', lineNumbers:true, matchBrackets:true, autoCloseBrackets:true,
-        styleActiveLine:true, indentUnit:4, tabSize:4, indentWithTabs:false, lineWrapping:false,
-        extraKeys: {
-            'Ctrl-Enter':runCode, 'Cmd-Enter':runCode,
-            'Ctrl-/':'toggleComment', 'Cmd-/':'toggleComment',
-            'Tab': function(cm) { if(cm.somethingSelected()) cm.indentSelection('add'); else cm.replaceSelection('    ','end'); }
-        }
-    });
-    editor.setValue(defaultCode);
-    editor.on('cursorActivity', function() {
-        const c = editor.getCursor();
-        document.getElementById('cursorInfo').textContent = `Ln ${c.line+1}, Col ${c.ch+1}`;
-    });
-    editor.on('change', function() {
-        const m = editor.getValue().match(/public\s+class\s+(\w+)/);
-        document.getElementById('fileName').textContent = (m?m[1]:'Main') + '.java';
-    });
-    editor.refresh();
-    setTimeout(() => editor.focus(), 150);
-    window.addEventListener('resize', () => editor.refresh());
-
-    // ── Tab switching ────────────────────────────────────────────────────────
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const t = this.dataset.tab;
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.style.borderBottomColor='transparent';
-                b.style.color='var(--muted)';
-                b.classList.remove('active-tab');
-            });
-            this.style.borderBottomColor='var(--accent)';
-            this.style.color='var(--accent)';
-            this.classList.add('active-tab');
-            document.getElementById('outputPane').classList.toggle('hidden', t!=='output');
-            document.getElementById('stdinPane').classList.toggle('hidden', t!=='stdin');
-        });
-    });
-
-    // ── Panel resize ─────────────────────────────────────────────────────────
-    (function() {
-        const div=document.getElementById('panelDivider'),
-              ep=document.querySelector('.editor-panel'),
-              op=document.querySelector('.output-panel');
-        let drag=false;
-        div.addEventListener('mousedown', e => {
-            drag=true;
-            div.classList.add('active');
-            document.body.style.cursor='col-resize';
-            document.body.style.userSelect='none';
-            e.preventDefault();
-        });
-        document.addEventListener('mousemove', e => {
-            if(!drag) return;
-            const r=ep.parentElement.getBoundingClientRect();
-            let ratio = window.innerWidth<=768
-                ? (e.clientY-r.top)/r.height
-                : (e.clientX-r.left)/r.width;
-            ratio=Math.max(.25,Math.min(.75,ratio));
-            ep.style.width=(ratio*100)+'%';
-            op.style.width=((1-ratio)*100)+'%';
-            editor.refresh();
-        });
-        document.addEventListener('mouseup', () => {
-            if(drag){
-                drag=false;
-                div.classList.remove('active');
-                document.body.style.cursor='';
-                document.body.style.userSelect='';
-            }
-        });
-    })();
-
-    // ── Utilities ────────────────────────────────────────────────────────────
-    function extractClassName(code) {
-        const m = code.match(/public\s+class\s+(\w+)/);
-        return m ? m[1] : 'Main';
-    }
-
-    let isRunning=false, lastOutputText='';
-
-    // ── Execute via local server ─────────────────────────────────────────────
-    async function runViaLocal(code, stdin) {
-        const resp = await fetch((LOCAL_SERVER || '') + '/execute', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({code, stdin}),
-            signal: AbortSignal.timeout(35000)
-        });
-        if (!resp.ok) throw new Error(`Local server HTTP ${resp.status}`);
-        return resp.json();
-    }
-
-    // ── Execute via Cloud JDK server (Render) ─────────────────────────────────
-    async function runViaCloud(code, stdin) {
-        const resp = await fetch(CLOUD_SERVER + '/execute', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({code, stdin}),
-            signal: AbortSignal.timeout(35000)
-        });
-        if (!resp.ok) throw new Error(`Cloud server HTTP ${resp.status}`);
-        return resp.json();
-    }
-
-    // ── Execute via Rextester (online fallback) ───────────────────────────────
-    async function runViaRextester(code, stdin) {
-        const safeCode = code.replace(/\bpublic(\s+class\s+\w+)/, '$1');
-        const params = new URLSearchParams({
-            LanguageChoiceWrapper: '4',
-            EditorChoiceWrapper: '1',
-            LayoutChoiceWrapper: '1',
-            Program: safeCode,
-            Input: stdin,
-            CompilerArgs: ''
-        });
-        const resp = await fetch('https://rextester.com/rundotnet/run', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: params.toString(),
-            signal: AbortSignal.timeout(35000)
-        });
-        if (!resp.ok) throw new Error(`Rextester HTTP ${resp.status}`);
-        const d = await resp.json();
-        if (d.NotAvailable) throw new Error('Rextester service unavailable');
-        return {
-            stdout: d.Result  || '',
-            stderr: d.Errors  || '',
-            exitCode: d.Errors ? 1 : 0
-        };
-    }
-
-    // ── Main run function ─────────────────────────────────────────────────────
-    async function runCode() {
-        if(isRunning) return;
-        isRunning = true;
-
-        await checkServerStatus();
-
-        const runBtn    = document.getElementById('runBtn');
-        const status    = document.getElementById('statusIndicator');
-        const outputEl  = document.getElementById('outputContent');
-        const footer    = document.getElementById('outputFooter');
-
-        document.querySelector('[data-tab="output"]').click();
-        runBtn.innerHTML = '<i class="fa-solid fa-circle-notch anim-spin text-[10px]"></i><span>Running</span>';
-        runBtn.style.opacity = '.75';
-        runBtn.style.pointerEvents = 'none';
-        runBtn.classList.add('anim-pulse');
-        footer.classList.add('hidden');
-        footer.style.display = 'none';
-        lastOutputText = '';
-
-        const code  = editor.getValue();
-        const stdin = document.getElementById('stdinInput').value;
-        let result=null, usedBackend=null, lastError=null;
-        const t0 = performance.now();
-
-        // ── Try 1: Local JDK server ───────────────────────────────────────────
-        if (localServerAvailable) {
-            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block anim-blink" style="background:var(--warning);"></span> Compiling...';
-            status.style.color = 'var(--warning)';
-            outputEl.innerHTML = '<span style="color:var(--warning);"><i class="fa-solid fa-gear anim-spin mr-2"></i>Compiling with local JDK...</span>';
-            try {
-                result = await runViaLocal(code, stdin);
-                usedBackend = '&#x26A1; Local JDK';
-            } catch(e) {
-                lastError = e;
-            }
-        }
-
-        // ── Try 2: Render Cloud JDK ───────────────────────────────────────────
-        if (!result) {
-            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block anim-blink" style="background:var(--warning);"></span> Compiling...';
-            status.style.color = 'var(--warning)';
-            outputEl.innerHTML = '<span style="color:var(--warning);"><i class="fa-solid fa-gear anim-spin mr-2"></i>Compiling on Cloud JDK 21...</span>';
-            try {
-                result = await runViaCloud(code, stdin);
-                usedBackend = '&#x2601;&#xFE0F; Cloud JDK 21';
-            } catch(e) {
-                lastError = e;
-            }
-        }
-
-        // ── Try 3: Rextester online fallback ──────────────────────────────────
-        if (!result) {
-            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block anim-blink" style="background:var(--warning);"></span> Rextester...';
-            status.style.color = 'var(--warning)';
-            outputEl.innerHTML = '<span style="color:var(--warning);"><i class="fa-solid fa-gear anim-spin mr-2"></i>Connecting to fallback server...</span>';
-            try {
-                result = await runViaRextester(code, stdin);
-                usedBackend = 'Rextester';
-            } catch(e) {
-                lastError = e;
-            }
-        }
-
-        const elapsed = ((performance.now()-t0)/1000).toFixed(2);
-
-        if (result) {
-            renderResult(result, elapsed, usedBackend);
-        } else {
-            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--error);"></span> Failed';
-            status.style.color = 'var(--error)';
-            outputEl.innerHTML = `
-<div class="anim-fade-up" style="color:var(--error);font-weight:600;font-size:14px;">
-    <i class="fa-solid fa-triangle-exclamation mr-2"></i>Execution Failed
-</div>
-<div class="anim-fade-up mt-2" style="color:var(--muted);font-size:12px;line-height:1.9;">
-    <strong style="color:var(--text-dim);">Error:</strong> ${lastError ? lastError.message : 'Unknown error'}
-</div>
-<div class="anim-fade-up mt-3 px-3 py-2.5 rounded-lg" style="background:var(--card);border:1px solid var(--border);font-size:12px;line-height:1.9;">
-    <div style="color:var(--warning);font-weight:600;margin-bottom:6px;">
-        <i class="fa-solid fa-lightbulb mr-1"></i>How to fix:
-    </div>
-    ${fixTip}
-</div>`;
-            showToast('Execution failed', 'error');
-        }
-
-        runBtn.innerHTML = '<i class="fa-solid fa-play text-[10px]"></i><span>Run</span>';
-        runBtn.style.opacity = '1';
-        runBtn.style.pointerEvents = 'auto';
-        runBtn.classList.remove('anim-pulse');
-        isRunning = false;
-    }
-
-    // ── Render result ─────────────────────────────────────────────────────────
-    function renderResult(r, elapsed, backendName) {
-        const outputEl = document.getElementById('outputContent');
-        const status   = document.getElementById('statusIndicator');
-        const footer   = document.getElementById('outputFooter');
-        const hasErr   = !!r.stderr && r.stderr.trim().length > 0;
-        const hasOut   = !!r.stdout && r.stdout.trim().length > 0;
-        outputEl.innerHTML = '';
-        lastOutputText = '';
-
-        if (hasErr && !hasOut) {
-            // ── Compile / runtime error only ────────────────────────────────
-            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--error);"></span> Error';
-            status.style.color = 'var(--error)';
-            const d = document.createElement('div');
-            d.className = 'anim-fade-up';
-            d.style.cssText = 'color:var(--error);white-space:pre-wrap;word-break:break-word;line-height:1.7;padding:12px;border-radius:8px;background:var(--error-bg);border:1px solid rgba(244,63,94,.15);font-size:13px;';
-            d.textContent = r.stderr.trim();
-            outputEl.appendChild(d);
-            lastOutputText = r.stderr;
-
-        } else if (hasErr && hasOut) {
-            // ── Output + exception ───────────────────────────────────────────
-            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--warning);"></span> Exception';
-            status.style.color = 'var(--warning)';
-            appendOutputLines(outputEl, r.stdout);
-            const d = document.createElement('div');
-            d.className = 'anim-fade-up mt-3';
-            d.style.cssText = 'color:var(--error);white-space:pre-wrap;word-break:break-word;line-height:1.7;padding:10px;border-radius:8px;background:var(--error-bg);border:1px solid rgba(244,63,94,.12);font-size:12px;';
-            d.textContent = r.stderr.trim();
-            outputEl.appendChild(d);
-            lastOutputText = r.stdout + '\n' + r.stderr;
-
-        } else if (hasOut) {
-            // ── Clean output ─────────────────────────────────────────────────
-            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> Success';
-            status.style.color = 'var(--accent)';
-            appendOutputLines(outputEl, r.stdout);
-            lastOutputText = r.stdout;
-            showToast('Done', 'success');
-
-        } else {
-            // ── No output ────────────────────────────────────────────────────
-            status.innerHTML = '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> Done';
-            status.style.color = 'var(--accent)';
-            outputEl.innerHTML = '<span class="anim-fade-up" style="color:var(--muted);">(No output)</span>';
-            lastOutputText = '';
-        }
-
-        footer.classList.remove('hidden');
-        footer.style.display = 'flex';
-        document.getElementById('execTime').textContent = `Time: ${elapsed}s`;
-        document.getElementById('backendUsed').innerHTML = `<span style="color:var(--muted);">via ${backendName}</span>`;
-        document.getElementById('exitStatus').innerHTML = r.exitCode === 0
-            ? `<span style="color:var(--accent);">Exit 0</span>`
-            : `<span style="color:var(--error);">Exit ${r.exitCode}</span>`;
-        document.getElementById('outputPane').scrollTop = 0;
-    }
-
-    function appendOutputLines(container, text) {
-        const wrap = document.createElement('div');
-        text.split('\n').forEach((line, i) => {
-            const el = document.createElement('div');
-            el.className = 'anim-fade-up';
-            el.style.animationDelay = Math.min(i*15, 500) + 'ms';
-            el.style.lineHeight = '1.75';
-            if (line.trim()) {
-                const arrow = document.createElement('span');
-                arrow.style.cssText = 'color:var(--muted);margin-right:10px;user-select:none;';
-                arrow.textContent = '>';
-                const txt = document.createElement('span');
-                txt.style.color = 'var(--text)';
-                txt.textContent = line;
-                el.appendChild(arrow);
-                el.appendChild(txt);
+            // Load persisted code or clean boilerplate
+            const savedCode = localStorage.getItem('javaforge_code');
+            if (savedCode && savedCode.trim()) {
+                editor.setValue(savedCode);
             } else {
-                el.innerHTML = '&nbsp;';
+                editor.setValue(DEFAULT_BOILERPLATE);
             }
-            wrap.appendChild(el);
+            editor.clearHistory();
+            updateFileNameFromCode();
+
+            // Load persisted stdin if any
+            const savedStdin = localStorage.getItem('javaforge_stdin');
+            if (savedStdin) {
+                const stdinEl = document.getElementById('stdinInput');
+                if (stdinEl) {
+                    stdinEl.value = savedStdin;
+                    updateStdinDot();
+                }
+            }
         });
-        container.appendChild(wrap);
-    }
 
-    // ── Toolbar actions ───────────────────────────────────────────────────────
-    function clearOutput() {
-        document.getElementById('outputContent').innerHTML =
-            '<span style="color:var(--accent);opacity:.7;">// Cleared</span>';
-        const f = document.getElementById('outputFooter');
-        f.classList.add('hidden');
-        f.style.display = 'none';
-        document.getElementById('statusIndicator').innerHTML =
-            '<span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--accent);"></span> Ready';
-        document.getElementById('statusIndicator').style.color = 'var(--muted)';
-        lastOutputText = '';
-    }
+        function initSavedPreferences() {
+            // Theme preference
+            const savedTheme = localStorage.getItem('javaforge_theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                const icon = document.getElementById('themeIcon');
+                if (icon) icon.className = 'fa-solid fa-sun text-xs text-amber-400';
+            }
 
-    function copyOutput() {
-        if(!lastOutputText) { showToast('Nothing to copy', 'error'); return; }
-        navigator.clipboard.writeText(lastOutputText)
-            .then(() => showToast('Copied', 'success'))
-            .catch(() => showToast('Copy failed', 'error'));
-    }
+            // Font size preference
+            const savedFontSize = localStorage.getItem('javaforge_fontsize');
+            if (savedFontSize) {
+                const sz = parseFloat(savedFontSize);
+                if (!isNaN(sz) && sz >= 11 && sz <= 22) {
+                    currentFontSize = sz;
+                    const lbl = document.getElementById('fontSizeLabel');
+                    if (lbl) lbl.textContent = `${currentFontSize}px`;
+                }
+            }
+        }
 
-    function downloadCode() {
-        const code = editor.getValue();
-        const cn   = extractClassName(code);
-        const blob = new Blob([code], {type:'text/x-java'});
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url;
-        a.download = cn + '.java';
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('Downloaded', 'success');
-    }
+        function fetchBackendInfo() {
+            fetch('/health')
+                .then(r => r.json())
+                .then(d => {
+                    const badge = document.getElementById('backendVersionBadge');
+                    if (badge && d.jdk) {
+                        const match = d.jdk.match(/(\d+)/);
+                        badge.textContent = `Java ${match ? match[1] : '17'} (OpenJDK)`;
+                    }
+                })
+                .catch(() => {});
+        }
 
-    function showToast(msg, type='success') {
-        const c = document.getElementById('toastContainer');
-        const t = document.createElement('div');
-        t.className = `toast-item toast-${type}`;
-        t.innerHTML = (type==='success'
-            ? '<i class="fa-solid fa-check-circle text-[12px]"></i>'
-            : '<i class="fa-solid fa-circle-xmark text-[12px]"></i>') + `<span>${msg}</span>`;
-        c.appendChild(t);
-        requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('visible')));
-        setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 400); }, 2400);
-    }
+        function updateFileNameFromCode() {
+            if (!editor) return;
+            const code = editor.getValue();
+            const noComments = code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+            let name = 'Main';
+            const mainIndex = noComments.search(/(?:public\s+static|static\s+public)\s+void\s+main\s*\(/);
+            if (mainIndex !== -1) {
+                const beforeMain = noComments.slice(0, mainIndex);
+                const matches = [...beforeMain.matchAll(/(?:^|\s)(?:public\s+)?(?:class|record|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)/g)];
+                if (matches.length > 0) {
+                    name = matches[matches.length - 1][1];
+                }
+            } else {
+                const pubMatch = noComments.match(/public\s+(?:class|record|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)/);
+                if (pubMatch) {
+                    name = pubMatch[1];
+                } else {
+                    const anyMatch = noComments.match(/(?:^|\s)(?:class|record|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)/);
+                    if (anyMatch) name = anyMatch[1];
+                }
+            }
+
+            const label = document.getElementById('fileNameLabel');
+            if (label) label.textContent = `${name}.java`;
+        }
+
+        function initCodeMirror() {
+            const textarea = document.getElementById('codeEditor');
+            editor = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                mode: 'text/x-java',
+                indentUnit: 4,
+                tabSize: 4,
+                indentWithTabs: false,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                styleActiveLine: true,
+                lineWrapping: true,
+                extraKeys: {
+                    "Tab": function(cm) {
+                        if (cm.somethingSelected()) {
+                            cm.indentSelection("add");
+                        } else {
+                            cm.replaceSelection("    ", "end");
+                        }
+                    },
+                    "Shift-Tab": function(cm) {
+                        cm.indentSelection("subtract");
+                    },
+                    "Ctrl-Enter": function() {
+                        executeJava();
+                    },
+                    "Cmd-Enter": function() {
+                        executeJava();
+                    }
+                }
+            });
+
+            // Apply saved font size
+            editor.getWrapperElement().style.fontSize = `${currentFontSize}px`;
+
+            editor.on('change', () => {
+                const code = editor.getValue();
+                localStorage.setItem('javaforge_code', code);
+                document.getElementById('dirtyIndicator').classList.remove('hidden');
+                clearErrorHighlight();
+                updateFileNameFromCode();
+            });
+
+            editor.on('cursorActivity', () => {
+                const pos = editor.getCursor();
+                document.getElementById('cursorPos').textContent = `Ln ${pos.line + 1}, Col ${pos.ch + 1}`;
+            });
+
+            window.addEventListener('resize', () => {
+                if (editor) editor.refresh();
+            });
+        }
+
+        // Cancel running execution
+        function cancelExecution() {
+            if (currentAbortController) {
+                currentAbortController.abort();
+                currentAbortController = null;
+            }
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = 'Cancelled';
+            statusBadge.className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border border-amber-800 bg-amber-950/50 text-amber-400';
+            
+            const consoleArea = document.getElementById('consoleArea');
+            const cancelMsg = document.createElement('div');
+            cancelMsg.className = 'text-amber-400 font-mono text-xs mt-1';
+            cancelMsg.textContent = 'Execution cancelled by user.';
+            consoleArea.appendChild(cancelMsg);
+            
+            resetRunButton();
+        }
+
+        function resetRunButton() {
+            isExecuting = false;
+            const runBtn = document.getElementById('runButton');
+            const runIcon = document.getElementById('runIcon');
+            const runText = document.getElementById('runText');
+            if (runBtn) {
+                runBtn.disabled = false;
+                runBtn.style.opacity = '1';
+                runBtn.style.background = 'var(--accent-green)';
+                runBtn.title = 'Run Code (Ctrl+Enter or F5)';
+            }
+            if (runIcon) runIcon.className = 'fa-solid fa-play text-[11px]';
+            if (runText) runText.textContent = 'Run';
+        }
+
+        // Execute Java Code
+        async function executeJava() {
+            if (isExecuting) {
+                cancelExecution();
+                return;
+            }
+
+            const code = editor.getValue().trim();
+            if (!code) {
+                showToast('Please enter Java code to compile.');
+                return;
+            }
+
+            // Clear previous error decorations
+            clearErrorHighlight();
+
+            const stdin = document.getElementById('stdinInput').value;
+
+            // Automatically open Stdin panel if Scanner is used and input is empty
+            if (code.includes('Scanner') && code.includes('System.in') && !stdin.trim()) {
+                const stdinContainer = document.getElementById('stdinContainer');
+                if (stdinContainer.classList.contains('hidden')) {
+                    toggleStdinPanel();
+                }
+            }
+            const consoleArea = document.getElementById('consoleArea');
+            const runBtn = document.getElementById('runButton');
+            const runIcon = document.getElementById('runIcon');
+            const runText = document.getElementById('runText');
+            const statusBadge = document.getElementById('statusBadge');
+            const execTimer = document.getElementById('execTimer');
+            const missingInputPrompt = document.getElementById('missingInputPrompt');
+
+            missingInputPrompt.classList.add('hidden');
+
+            // UI: Running State with Stop option
+            isExecuting = true;
+            currentAbortController = new AbortController();
+            runBtn.disabled = false;
+            runBtn.style.background = 'var(--accent-red)';
+            runBtn.title = 'Click to Stop Execution';
+            runIcon.className = 'fa-solid fa-stop text-[11px]';
+            runText.textContent = 'Stop';
+            statusBadge.textContent = 'Running';
+            statusBadge.className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border border-emerald-800/50 bg-emerald-950/40 text-emerald-400';
+
+            consoleArea.innerHTML = `<div class="text-neutral-500 font-mono text-[11px]">Compiling and running on OpenJDK...</div>`;
+
+            const startTime = performance.now();
+
+            try {
+                const res = await fetch('/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, stdin }),
+                    signal: currentAbortController.signal
+                });
+
+                const data = await res.json();
+                const duration = Math.round(performance.now() - startTime);
+
+                execTimer.textContent = `${duration}ms`;
+                execTimer.classList.remove('hidden');
+
+                if (data.className) {
+                    const label = document.getElementById('fileNameLabel');
+                    if (label) label.textContent = `${data.className}.java`;
+                }
+
+                renderOutput(data);
+
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    // Handled in cancelExecution
+                    return;
+                }
+                statusBadge.textContent = 'Network Error';
+                statusBadge.className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border border-rose-800 bg-rose-950 text-rose-400';
+                consoleArea.innerHTML = `<div class="text-rose-400 font-mono text-xs">Error connecting to compiler backend: ${escapeHtml(err.message)}</div>`;
+            } finally {
+                resetRunButton();
+            }
+        }
+
+        function renderOutput(data) {
+            const consoleArea = document.getElementById('consoleArea');
+            const statusBadge = document.getElementById('statusBadge');
+            const missingInputPrompt = document.getElementById('missingInputPrompt');
+            consoleArea.innerHTML = '';
+
+            const stdout = data.stdout || '';
+            const stderr = data.stderr || '';
+            const exitCode = data.exitCode;
+
+            if (exitCode === 0) {
+                statusBadge.textContent = 'Success';
+                statusBadge.className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border border-emerald-800 bg-emerald-950/50 text-emerald-400';
+            } else {
+                statusBadge.textContent = `Exit Code ${exitCode ?? 1}`;
+                statusBadge.className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border border-rose-800 bg-rose-950/50 text-rose-400';
+            }
+
+            // Detect NoSuchElementException or missing Scanner input
+            if (stderr.includes('NoSuchElementException') || stderr.includes('java.util.NoSuchElementException')) {
+                missingInputPrompt.classList.remove('hidden');
+                document.getElementById('quickStdin').focus();
+            }
+
+            // Print stdout
+            if (stdout) {
+                const stdoutDiv = document.createElement('div');
+                stdoutDiv.className = 'text-neutral-100 whitespace-pre-wrap font-mono';
+                stdoutDiv.textContent = stdout;
+                consoleArea.appendChild(stdoutDiv);
+            }
+
+            // Print stderr and highlight error lines (compiler error or runtime exception)
+            if (stderr) {
+                const stderrDiv = document.createElement('div');
+                stderrDiv.className = 'text-rose-400 whitespace-pre-wrap font-mono mt-1';
+
+                // 1. Try compiler error pattern (e.g. Main.java:5: error:)
+                let lineNum = -1;
+                const compileMatch = stderr.match(/(?:[A-Za-z0-9_$]+\.java):(\d+):/);
+                if (compileMatch && compileMatch[1]) {
+                    lineNum = parseInt(compileMatch[1], 10) - 1;
+                } else {
+                    // 2. Try runtime exception stack trace (e.g. at Main.main(Main.java:5))
+                    const runtimeMatch = stderr.match(/\((?:[A-Za-z0-9_$]+\.java):(\d+)\)/);
+                    if (runtimeMatch && runtimeMatch[1]) {
+                        lineNum = parseInt(runtimeMatch[1], 10) - 1;
+                    }
+                }
+
+                if (lineNum >= 0) {
+                    highlightErrorLine(lineNum);
+                }
+
+                stderrDiv.textContent = stderr;
+                consoleArea.appendChild(stderrDiv);
+            }
+
+            if (!stdout && !stderr) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'text-neutral-500 italic text-xs';
+                emptyDiv.textContent = 'Program finished with no output.';
+                consoleArea.appendChild(emptyDiv);
+            }
+
+            consoleArea.scrollTop = consoleArea.scrollHeight;
+        }
+
+        function highlightErrorLine(lineNum) {
+            clearErrorHighlight();
+            if (editor && lineNum >= 0 && lineNum < editor.lineCount()) {
+                activeErrorLine = editor.addLineClass(lineNum, 'background', 'error-line');
+                editor.setCursor(lineNum, 0);
+                editor.scrollIntoView({ line: lineNum, ch: 0 }, 80);
+            }
+        }
+
+        function clearErrorHighlight() {
+            if (editor && activeErrorLine !== null) {
+                editor.removeLineClass(activeErrorLine, 'background', 'error-line');
+                activeErrorLine = null;
+            }
+        }
+
+        // Reset to minimal boilerplate
+        function resetBoilerplate() {
+            if (confirm('Reset code to minimal Java starter?')) {
+                editor.setValue(DEFAULT_BOILERPLATE);
+                localStorage.removeItem('javaforge_code');
+                document.getElementById('dirtyIndicator').classList.add('hidden');
+                clearErrorHighlight();
+                showToast('Reset to minimal template');
+            }
+        }
+
+        // Clear console output
+        function clearConsole() {
+            const consoleArea = document.getElementById('consoleArea');
+            consoleArea.innerHTML = `<div class="text-neutral-500 italic text-[12px]">// Console output cleared.</div>`;
+            document.getElementById('statusBadge').textContent = 'Idle';
+            document.getElementById('statusBadge').className = 'text-[10px] font-mono px-1.5 py-0.2 rounded border border-neutral-800 bg-neutral-900 text-neutral-400';
+            document.getElementById('execTimer').classList.add('hidden');
+            document.getElementById('missingInputPrompt').classList.add('hidden');
+            clearErrorHighlight();
+        }
+
+        // Standard Input Panel Toggle
+        function toggleStdinPanel() {
+            const stdinContainer = document.getElementById('stdinContainer');
+            const isHidden = stdinContainer.classList.contains('hidden');
+
+            if (isHidden) {
+                stdinContainer.classList.remove('hidden');
+                document.getElementById('stdinInput').focus();
+            } else {
+                stdinContainer.classList.add('hidden');
+            }
+            updateStdinDot();
+        }
+
+        function updateStdinDot() {
+            const val = document.getElementById('stdinInput').value;
+            localStorage.setItem('javaforge_stdin', val);
+            const dot = document.getElementById('stdinDot');
+            if (val.trim()) {
+                dot.classList.remove('hidden');
+            } else {
+                dot.classList.add('hidden');
+            }
+        }
+
+        function sendQuickStdinAndRun() {
+            const val = document.getElementById('quickStdin').value;
+            document.getElementById('stdinInput').value = val;
+            updateStdinDot();
+            executeJava();
+        }
+
+        // Format Java Code
+        function formatJavaCode() {
+            const totalLines = editor.lineCount();
+            for (let i = 0; i < totalLines; i++) {
+                editor.indentLine(i);
+            }
+            showToast('Code formatted');
+        }
+
+        // Copy console output
+        function copyOutput() {
+            const text = document.getElementById('consoleArea').innerText;
+            if (!text) return;
+            navigator.clipboard.writeText(text);
+            showToast('Console output copied');
+        }
+
+        // Font Size Adjustments
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(11, Math.min(22, currentFontSize + delta));
+            if (editor) {
+                editor.getWrapperElement().style.fontSize = `${currentFontSize}px`;
+            }
+            document.getElementById('fontSizeLabel').textContent = `${currentFontSize}px`;
+            localStorage.setItem('javaforge_fontsize', currentFontSize);
+            editor.refresh();
+        }
+
+        // Theme Toggle (Dark / Light)
+        function toggleTheme() {
+            const isLight = document.body.classList.toggle('light-theme');
+            const icon = document.getElementById('themeIcon');
+            if (isLight) {
+                icon.className = 'fa-solid fa-sun text-xs text-amber-400';
+                localStorage.setItem('javaforge_theme', 'light');
+            } else {
+                icon.className = 'fa-solid fa-moon text-xs';
+                localStorage.setItem('javaforge_theme', 'dark');
+            }
+            editor.refresh();
+        }
+
+        // Resizable Splitter with touch support
+        function initResizer() {
+            const resizer = document.getElementById('resizer');
+            const editorPanel = document.getElementById('editorPanel');
+            const workspace = document.getElementById('workspace');
+
+            let isDragging = false;
+
+            const onStart = (e) => {
+                isDragging = true;
+                resizer.classList.add('dragging');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            };
+
+            const onMove = (clientX) => {
+                if (!isDragging) return;
+                const rect = workspace.getBoundingClientRect();
+                const offset = clientX - rect.left;
+                const totalWidth = rect.width;
+                const percentage = Math.max(20, Math.min(80, (offset / totalWidth) * 100));
+
+                editorPanel.style.flex = `0 0 ${percentage}%`;
+                editor.refresh();
+            };
+
+            const onEnd = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    resizer.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    editor.refresh();
+                }
+            };
+
+            resizer.addEventListener('mousedown', onStart);
+            window.addEventListener('mousemove', (e) => onMove(e.clientX));
+            window.addEventListener('mouseup', onEnd);
+
+            resizer.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 0) onStart(e);
+            }, { passive: false });
+            window.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length > 0) onMove(e.touches[0].clientX);
+            }, { passive: false });
+            window.addEventListener('touchend', onEnd);
+        }
+
+        // Global Shortcuts (Ctrl+Enter / F5 to run, Shift+Alt+F to format, Escape to stop)
+        function initShortcuts() {
+            window.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    executeJava();
+                } else if (e.key === 'F5') {
+                    e.preventDefault();
+                    executeJava();
+                } else if (e.shiftKey && e.altKey && (e.key === 'F' || e.key === 'f')) {
+                    e.preventDefault();
+                    formatJavaCode();
+                } else if (e.key === 'Escape' && isExecuting) {
+                    e.preventDefault();
+                    cancelExecution();
+                }
+            });
+        }
+
+        // Toast Helper
+        let toastTimeout = null;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 1800);
+        }
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
     </script>
 </body>
 </html>

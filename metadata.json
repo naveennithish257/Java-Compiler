@@ -1,6 +1,6 @@
 {
   "name": "JavaForge",
-  "description": "Online Java compiler and execution environment",
+  "description": "Professional online Java IDE, compiler and execution environment",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

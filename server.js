@@ -25,19 +25,28 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Helper to get installed JDK version
-function getJdkVersion() {
+let localJdkAvailable = false;
+let localJdkVersion = 'JDK not detected';
+
+function detectJdk() {
   return new Promise((resolve) => {
-    execFile('java', ['-version'], { timeout: 5000 }, (error, stdout, stderr) => {
+    execFile('java', ['-version'], { timeout: 4000 }, (error, stdout, stderr) => {
       if (error) {
-        resolve('JDK not detected');
+        localJdkAvailable = false;
+        localJdkVersion = 'JDK not detected';
+        resolve(false);
         return;
       }
+      localJdkAvailable = true;
       const output = stdout || stderr || '';
-      const firstLine = output.split('\n')[0]?.trim() || 'unknown';
-      resolve(firstLine);
+      localJdkVersion = output.split('\n')[0]?.trim() || 'OpenJDK';
+      resolve(true);
     });
   });
 }
+
+// Initial detection
+detectJdk();
 
 // Clean temporary directory paths from compiler output
 function cleanPaths(text, tmpdir) {
@@ -49,21 +58,267 @@ function cleanPaths(text, tmpdir) {
     .split(tmpdir).join('');
 }
 
+// Helper to mask comments and string/char literals while preserving line lengths
+function stripCommentsAndStrings(code) {
+  if (!code) return '';
+  let result = '';
+  let inString = false;
+  let inChar = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  for (let i = 0; i < code.length; i++) {
+    const c = code[i];
+    const next = code[i + 1];
+
+    if (inLineComment) {
+      if (c === '\n') {
+        inLineComment = false;
+        result += '\n';
+      } else {
+        result += ' ';
+      }
+    } else if (inBlockComment) {
+      if (c === '*' && next === '/') {
+        inBlockComment = false;
+        result += '  ';
+        i++;
+      } else {
+        result += (c === '\n' ? '\n' : ' ');
+      }
+    } else if (inString) {
+      if (c === '\\') {
+        result += '  ';
+        i++;
+      } else if (c === '"') {
+        inString = false;
+        result += ' ';
+      } else {
+        result += (c === '\n' ? '\n' : ' ');
+      }
+    } else if (inChar) {
+      if (c === '\\') {
+        result += '  ';
+        i++;
+      } else if (c === "'") {
+        inChar = false;
+        result += ' ';
+      } else {
+        result += (c === '\n' ? '\n' : ' ');
+      }
+    } else {
+      if (c === '/' && next === '/') {
+        inLineComment = true;
+        result += '  ';
+        i++;
+      } else if (c === '/' && next === '*') {
+        inBlockComment = true;
+        result += '  ';
+        i++;
+      } else if (c === '"') {
+        inString = true;
+        result += ' ';
+      } else if (c === "'") {
+        inChar = true;
+        result += ' ';
+      } else {
+        result += c;
+      }
+    }
+  }
+  return result;
+}
+
+// Robust class name extraction: identifies top-level class enclosing the main method
+function extractJavaClassName(code) {
+  if (!code) return 'Main';
+  const clean = stripCommentsAndStrings(code);
+  let depth = 0;
+  const topLevelTypes = [];
+  let currentTopLevel = null;
+
+  const regex = /\{|\}|(?:^|\s)(public\s+)?(class|record|enum|interface)\s+([A-Za-z_$][A-Za-z0-9_$]*)|(?:public\s+static|static\s+public)\s+void\s+main\s*\(/g;
+  let match;
+
+  while ((match = regex.exec(clean)) !== null) {
+    const token = match[0].trim();
+    if (token === '{') {
+      depth++;
+    } else if (token === '}') {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) {
+        currentTopLevel = null;
+      }
+    } else if (match[2]) {
+      if (depth === 0) {
+        const isPublic = !!match[1];
+        const typeKind = match[2];
+        const name = match[3];
+        currentTopLevel = { name, isPublic, typeKind, hasMain: false, index: match.index };
+        topLevelTypes.push(currentTopLevel);
+      }
+    } else if (token.includes('main')) {
+      if (currentTopLevel && depth === 1) {
+        currentTopLevel.hasMain = true;
+      }
+    }
+  }
+
+  // 1. If any top-level type has main, select it
+  const withMain = topLevelTypes.find(t => t.hasMain);
+  if (withMain) return withMain.name;
+
+  // 2. If any top-level type is explicitly public, select it
+  const pub = topLevelTypes.find(t => t.isPublic);
+  if (pub) return pub.name;
+
+  // 3. Fallback to first declared top-level type
+  if (topLevelTypes.length > 0) {
+    return topLevelTypes[0].name;
+  }
+
+  return 'Main';
+}
+
+// Prepare Java source code: handles packages, raw snippets, and multi-class declarations
+function prepareJavaCode(code) {
+  if (!code) return { code: '', className: 'Main', wrapped: false, wrapperOffset: 0 };
+
+  const cleanCode = stripCommentsAndStrings(code);
+  const hasClassDeclaration = /(?:^|\s)(?:class|record|enum|interface)\s+[A-Za-z_$]/.test(cleanCode);
+  const hasMain = /(?:public\s+static|static\s+public)\s+void\s+main\s*\(/.test(cleanCode);
+
+  // If user provided raw statements without a class (e.g. System.out.println(...))
+  if (!hasClassDeclaration && !hasMain && cleanCode.trim().length > 0) {
+    const lines = code.split('\n');
+    const importLines = [];
+    const bodyLines = [];
+    for (const line of lines) {
+      if (/^\s*import\s+[^;]+;/.test(line)) {
+        importLines.push(line);
+      } else {
+        bodyLines.push(line);
+      }
+    }
+    const header = `import java.util.*;\nimport java.io.*;\nimport java.math.*;\n${importLines.length ? importLines.join('\n') + '\n' : ''}public class Main {\n    public static void main(String[] args) throws Exception {\n`;
+    const wrapperOffset = header.split('\n').length - 1;
+    const wrappedCode = `${header}${bodyLines.map(l => '        ' + l).join('\n')}\n    }\n}`;
+    return { code: wrappedCode, className: 'Main', wrapped: true, wrapperOffset };
+  }
+
+  // Comment out package declarations to preserve exact line numbering
+  let sanitizedCode = code.replace(/^(\s*package\s+[^;]+;)/gm, '// $1');
+  const className = extractJavaClassName(sanitizedCode);
+
+  // In standard Java, only ONE top-level type can be public.
+  // Parse top-level types (depth === 0) and strip 'public' from non-main top-level types.
+  let depth = 0;
+  const nonMainPublicRanges = [];
+  const regex = /\{|\}|(?:^|\s)(public\s+)?(class|record|enum|interface)\s+([A-Za-z_$][A-Za-z0-9_$]*)/g;
+  let match;
+
+  while ((match = regex.exec(cleanCode)) !== null) {
+    const token = match[0].trim();
+    if (token === '{') {
+      depth++;
+    } else if (token === '}') {
+      depth = Math.max(0, depth - 1);
+    } else if (match[2] && depth === 0) {
+      const isPublic = !!match[1];
+      const name = match[3];
+      if (isPublic && name !== className) {
+        const fullMatch = match[0];
+        const publicOffset = fullMatch.indexOf('public');
+        const start = match.index + publicOffset;
+        nonMainPublicRanges.push({ start, end: start + 7 });
+      }
+    }
+  }
+
+  if (nonMainPublicRanges.length > 0) {
+    nonMainPublicRanges.sort((a, b) => b.start - a.start);
+    for (const range of nonMainPublicRanges) {
+      sanitizedCode = sanitizedCode.slice(0, range.start) + sanitizedCode.slice(range.end);
+    }
+  }
+
+  return { code: sanitizedCode, className, wrapped: false, wrapperOffset: 0 };
+}
+
+const CLOUD_COMPILER_URL = 'https://java-compiler-suro.onrender.com/execute';
+
+// Ensure executable for cloud runner which specifically runs 'java Main'
+function ensureExecutableForCloud(code) {
+  if (!code) return code;
+  let processed = code.replace(/^(\s*package\s+[^;]+;)/gm, '// $1');
+
+  if (/\b(?:public\s+)?class\s+Main\b/.test(processed)) {
+    if (!/\bpublic\s+class\s+Main\b/.test(processed)) {
+      processed = processed.replace(/\bclass\s+Main\b/, 'public class Main');
+    }
+    return processed;
+  }
+
+  // If main class is named differently, rename it to Main for the cloud runner
+  const mainClassMatch = processed.match(/(?:^|\s)(?:public\s+)?class\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\{[\s\S]*?public\s+static\s+void\s+main\s*\(/);
+  if (mainClassMatch && mainClassMatch[1] !== 'Main') {
+    const origName = mainClassMatch[1];
+    return processed.replace(new RegExp('\\b(?:public\\s+)?class\\s+' + origName + '\\b'), 'public class Main');
+  }
+
+  return processed;
+}
+
+// Cloud compiler proxy for environments without a local JDK
+async function runViaCloudProxy(code, stdin) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 35000);
+  try {
+    const preparedCode = ensureExecutableForCloud(code);
+    const response = await fetch(CLOUD_COMPILER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: preparedCode, stdin }),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (!response.ok) {
+      throw new Error(`Cloud compiler HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    return {
+      stdout: data.stdout || '',
+      stderr: data.stderr || '',
+      exitCode: data.exitCode ?? 0,
+      backend: '☁️ Cloud OpenJDK 21'
+    };
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
 // GET /health endpoint
 app.get('/health', async (req, res) => {
-  const jdk = await getJdkVersion();
+  await detectJdk();
   res.json({
     status: 'ok',
-    jdk
+    localJdk: localJdkAvailable,
+    jdk: localJdkVersion,
+    cloudReady: true,
+    backend: localJdkAvailable ? localJdkVersion : 'Cloud OpenJDK 21'
   });
 });
 
-// Run command with input and timeout
-function runProcess(cmd, args, input = '', cwd = '', timeoutMs = 30000) {
+// Maximum process output size before truncation (512 KB)
+const MAX_OUTPUT_BYTES = 512 * 1024;
+
+// Run command with input, timeout, output cap, and client disconnect support
+function runProcess(cmd, args, input = '', cwd = '', timeoutMs = 30000, res = null) {
   return new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
-    let killed = false;
+    let resolved = false;
 
     let child;
     try {
@@ -79,21 +334,41 @@ function runProcess(cmd, args, input = '', cwd = '', timeoutMs = 30000) {
       return;
     }
 
+    const finish = (result) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+      if (res && resCloseHandler) {
+        res.removeListener('close', resCloseHandler);
+      }
+      resolve(result);
+    };
+
+    const resCloseHandler = () => {
+      if (res && !res.writableEnded) {
+        try { child.kill('SIGKILL'); } catch (_) {}
+        finish({
+          stdout,
+          stderr: 'Execution cancelled by client',
+          exitCode: -1
+        });
+      }
+    };
+    if (res) {
+      res.on('close', resCloseHandler);
+    }
+
     const timer = setTimeout(() => {
-      killed = true;
-      try {
-        child.kill('SIGKILL');
-      } catch (_) {}
-      resolve({
+      try { child.kill('SIGKILL'); } catch (_) {}
+      finish({
         stdout,
-        stderr: 'Execution timed out (30s limit)',
+        stderr: (stderr ? stderr + '\n' : '') + 'Execution timed out (30s limit)',
         exitCode: -1
       });
     }, timeoutMs);
 
     child.on('error', (err) => {
-      clearTimeout(timer);
-      resolve({
+      finish({
         stdout: '',
         stderr: err.code === 'ENOENT'
           ? 'javac/java not found. Make sure JDK is installed and in PATH.'
@@ -104,13 +379,25 @@ function runProcess(cmd, args, input = '', cwd = '', timeoutMs = 30000) {
 
     if (child.stdout) {
       child.stdout.on('data', (data) => {
-        stdout += data.toString('utf-8');
+        if (stdout.length < MAX_OUTPUT_BYTES) {
+          stdout += data.toString('utf-8');
+          if (stdout.length >= MAX_OUTPUT_BYTES) {
+            stdout += '\n[Output truncated: 512KB limit exceeded]';
+            try { child.kill('SIGKILL'); } catch (_) {}
+          }
+        }
       });
     }
 
     if (child.stderr) {
       child.stderr.on('data', (data) => {
-        stderr += data.toString('utf-8');
+        if (stderr.length < MAX_OUTPUT_BYTES) {
+          stderr += data.toString('utf-8');
+          if (stderr.length >= MAX_OUTPUT_BYTES) {
+            stderr += '\n[Error output truncated: 512KB limit exceeded]';
+            try { child.kill('SIGKILL'); } catch (_) {}
+          }
+        }
       });
     }
 
@@ -126,9 +413,7 @@ function runProcess(cmd, args, input = '', cwd = '', timeoutMs = 30000) {
     }
 
     child.on('close', (code) => {
-      clearTimeout(timer);
-      if (killed) return;
-      resolve({
+      finish({
         stdout,
         stderr,
         exitCode: code ?? 0
@@ -141,39 +426,97 @@ function runProcess(cmd, args, input = '', cwd = '', timeoutMs = 30000) {
 app.post('/execute', async (req, res) => {
   const { code = '', stdin = '' } = req.body || {};
 
-  // Extract public class name (fallback: Main)
-  const match = code.match(/public\s+class\s+(\w+)/);
-  const className = match ? match[1] : 'Main';
+  // Prepare code: handles packages, raw statements/snippets, and class names
+  const { code: preparedCode, className, wrapped, wrapperOffset } = prepareJavaCode(code);
+
+  // If local JDK is not installed in the container environment, use cloud execution immediately
+  if (!localJdkAvailable) {
+    try {
+      const cloudResult = await runViaCloudProxy(preparedCode, stdin);
+      return res.json({
+        ...cloudResult,
+        className
+      });
+    } catch (err) {
+      return res.status(502).json({
+        stdout: '',
+        stderr: 'Cloud compiler unavailable: ' + err.message,
+        exitCode: -1
+      });
+    }
+  }
 
   let tmpDir = '';
   try {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'javaforge-'));
     const javaFilePath = path.join(tmpDir, `${className}.java`);
-    fs.writeFileSync(javaFilePath, code, 'utf-8');
+    fs.writeFileSync(javaFilePath, preparedCode, 'utf-8');
 
-    // 1. Compile with javac
-    const compileResult = await runProcess('javac', [javaFilePath], '', tmpDir, 30000);
+    // 1. Compile with javac using UTF-8 encoding
+    const compileResult = await runProcess('javac', ['-encoding', 'UTF-8', javaFilePath], '', tmpDir, 30000, res);
     if (compileResult.exitCode !== 0) {
+      // If javac binary was missing despite detection, fall back to cloud
+      if (compileResult.stderr && compileResult.stderr.includes('not found')) {
+        localJdkAvailable = false;
+        const cloudResult = await runViaCloudProxy(preparedCode, stdin);
+        return res.json({ ...cloudResult, className });
+      }
+
+      let cleanedErr = cleanPaths(compileResult.stderr, tmpDir);
+      if (wrapped && wrapperOffset > 0) {
+        cleanedErr = cleanedErr.replace(new RegExp(`\\b${className}\\.java:(\\d+):`, 'g'), (_, line) => {
+          const adj = Math.max(1, parseInt(line, 10) - wrapperOffset);
+          return `${className}.java:${adj}:`;
+        });
+      }
+
       return res.json({
         stdout: '',
-        stderr: cleanPaths(compileResult.stderr, tmpDir),
-        exitCode: compileResult.exitCode
+        stderr: cleanedErr,
+        exitCode: compileResult.exitCode,
+        backend: localJdkVersion,
+        className
       });
     }
 
-    // 2. Run with java
-    const runResult = await runProcess('java', ['-cp', tmpDir, className], stdin, tmpDir, 30000);
+    // 2. Run with java using UTF-8 and memory limit
+    const runResult = await runProcess(
+      'java',
+      ['-Dfile.encoding=UTF-8', '-Xmx256m', '-cp', tmpDir, className],
+      stdin,
+      tmpDir,
+      30000,
+      res
+    );
+
+    let cleanedErr = cleanPaths(runResult.stderr, tmpDir);
+    if (wrapped && wrapperOffset > 0) {
+      cleanedErr = cleanedErr.replace(new RegExp(`\\b${className}\\.java:(\\d+)\\b`, 'g'), (_, line) => {
+        const adj = Math.max(1, parseInt(line, 10) - wrapperOffset);
+        return `${className}.java:${adj}`;
+      });
+    }
+
     return res.json({
       stdout: runResult.stdout,
-      stderr: cleanPaths(runResult.stderr, tmpDir),
-      exitCode: runResult.exitCode
+      stderr: cleanedErr,
+      exitCode: runResult.exitCode,
+      backend: localJdkVersion,
+      className
     });
   } catch (err) {
-    return res.json({
-      stdout: '',
-      stderr: String(err),
-      exitCode: -1
-    });
+    // Attempt cloud fallback on unexpected local failure
+    try {
+      const cloudResult = await runViaCloudProxy(preparedCode, stdin);
+      return res.json({ ...cloudResult, className });
+    } catch (cloudErr) {
+      return res.json({
+        stdout: '',
+        stderr: String(err),
+        exitCode: -1,
+        className
+      });
+    }
   } finally {
     if (tmpDir) {
       try {
